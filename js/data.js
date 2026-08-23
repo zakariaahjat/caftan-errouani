@@ -25,7 +25,12 @@ const DB = {
     return this.data;
   },
   save() {
-    localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+    try {
+      localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+    } catch (e) {
+      if (typeof toast === "function") toast("⚠️ Mémoire pleine — supprimez d'anciennes photos importées ou utilisez des URL.");
+      else alert("Mémoire du navigateur pleine : supprimez d'anciennes photos importées ou utilisez des URL.");
+    }
   },
   reset() {
     localStorage.removeItem(DB_KEY);

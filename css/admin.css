@@ -208,3 +208,16 @@
 .al-demo{display:none;margin-top:.7rem;padding:.75rem .9rem;background:#F4EDDD;border:1px dashed #A98340;border-radius:10px;font-size:.9rem;color:#5C4A22}
 .al-demo strong{font-size:1.15rem;letter-spacing:.25em;color:#26231F}
 #send-code-btn{margin-bottom:.3rem}
+
+/* ===== Gestionnaire d'images (URL + fichiers + galerie) ===== */
+.media-block .mb-strip{display:flex;flex-wrap:wrap;gap:.55rem;margin-bottom:.6rem;min-height:2rem}
+.mb-thumb{position:relative;width:74px;height:92px;border-radius:9px;overflow:hidden;border:1px solid #E5DBC7;background:#FDFAF3;flex:0 0 auto}
+.mb-thumb img{width:100%;height:100%;object-fit:cover}
+.mb-thumb.mb-main{outline:2px solid #A98340}
+.mb-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(38,35,31,.75);color:#fff;font-size:.62rem;line-height:20px;text-align:center;cursor:pointer;padding:0}
+.mb-x:hover{background:#B03A2E}
+.mb-tag{position:absolute;left:0;bottom:0;right:0;background:rgba(23,82,71,.88);color:#fff;font-size:.58rem;text-align:center;padding:2px 0;letter-spacing:.05em}
+.mb-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.mb-file{cursor:pointer;padding:.5rem .8rem;font-size:.8rem}
+.mb-url{flex:1;min-width:170px;padding:.55rem .7rem;border:1px solid #E5DBC7;border-radius:9px;background:#FDFAF3;font-size:.85rem}
+.mb-empty{font-size:.82rem;color:#A79B84;font-style:italic}

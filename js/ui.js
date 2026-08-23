@@ -123,6 +123,31 @@ function getParam(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
+/* Fichier → data URI JPEG compressé (pour stockage local) */
+function compressImage(file, maxW, quality) {
+  maxW = maxW || 1000; quality = quality || 0.72;
+  return new Promise(function (resolve, reject) {
+    if (!file || String(file.type).indexOf("image/") !== 0) { reject(new Error("Pas une image")); return; }
+    var url = URL.createObjectURL(file);
+    var im = new Image();
+    im.onload = function () {
+      try {
+        var scale = Math.min(1, maxW / im.naturalWidth);
+        var w = Math.max(1, Math.round(im.naturalWidth * scale));
+        var h = Math.max(1, Math.round(im.naturalHeight * scale));
+        var cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        var cx = cv.getContext("2d");
+        cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h);
+        cx.drawImage(im, 0, 0, w, h);
+        resolve(cv.toDataURL("image/jpeg", quality));
+      } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
+    };
+    im.onerror = function () { URL.revokeObjectURL(url); reject(new Error("Image illisible")); };
+    im.src = url;
+  });
+}
+
 function esc(s) {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")

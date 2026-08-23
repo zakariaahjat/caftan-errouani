@@ -108,6 +108,90 @@ function f(name, label, value, opts) {
 }
 
 function thumb(p) { return `<img src="${productImg(p)}"${imgAttrs(p)} alt="">`; }
+
+/* ===== Images : URL + import de fichiers + galerie multi-images ===== */
+function mediaBlockHTML(mode, p) {
+  const singleVal = mode === "single" ? ((p && p.img) || "") : "";
+  return `
+  <div class="mf-field mf-full media-block" id="media-block">
+    <label>${mode === "gallery" ? "Photos du produit — galerie multi-images" : "Photo du produit"}</label>
+    <div class="mb-strip" id="mb-strip"></div>
+    <div class="mb-actions">
+      <label class="abtn mb-file">📁 Importer ${mode === "gallery" ? "des photos (multi)" : "une photo"}<input type="file" accept="image/*"${mode === "gallery" ? " multiple" : ""} id="mb-files"></label>
+      <input type="url" class="mb-url" id="mb-url" placeholder="…ou coller une URL puis ➕">
+      <button type="button" class="abtn" id="mb-addurl">➕</button>
+    </div>
+    <span class="mf-hint">${mode === "gallery"
+      ? "La 1ʳᵉ photo est la principale · ✖ retire une photo · imports compressés automatiquement."
+      : "Importez un fichier OU collez une URL — compression automatique à l'import."}</span>
+    ${mode === "single" ? `<input type="hidden" data-f="img" value="${esc(singleVal)}">` : ""}
+    <textarea data-f="gallery" style="display:none">${esc(JSON.stringify((p && p.gallery) || []))}</textarea>
+  </div>`;
+}
+
+function wireMediaBlock(mode) {
+  const blk = document.getElementById("media-block");
+  if (!blk) return;
+  const strip = document.getElementById("mb-strip");
+  const filesIn = document.getElementById("mb-files");
+  const urlIn = document.getElementById("mb-url");
+  const addBtn = document.getElementById("mb-addurl");
+  const imgField = blk.querySelector('[data-f="img"]');
+  const galField = blk.querySelector('[data-f="gallery"]');
+  let gal = [];
+  try { gal = JSON.parse(galField.value || "[]"); } catch (e) { gal = []; }
+  if (!Array.isArray(gal)) gal = [];
+
+  function render() {
+    strip.innerHTML = "";
+    const list = mode === "single" ? [imgField.value] : gal;
+    list.filter(Boolean).forEach(function (src, i) {
+      const d = document.createElement("div");
+      d.className = "mb-thumb" + (mode === "gallery" && i === 0 ? " mb-main" : "");
+      const im = new Image(); im.src = src; im.alt = "";
+      d.appendChild(im);
+      const x = document.createElement("button");
+      x.type = "button"; x.className = "mb-x"; x.textContent = "✖"; x.title = "Retirer";
+      x.addEventListener("click", function () {
+        if (mode === "single") imgField.value = "";
+        else { gal.splice(i, 1); galField.value = JSON.stringify(gal); }
+        render();
+      });
+      d.appendChild(x);
+      if (mode === "gallery" && i === 0 && src) {
+        const t = document.createElement("span"); t.className = "mb-tag"; t.textContent = "Principale";
+        d.appendChild(t);
+      }
+      strip.appendChild(d);
+    });
+    if (!strip.children.length) strip.innerHTML = '<span class="mb-empty">Aucune image pour le moment</span>';
+  }
+
+  async function addFiles(files) {
+    let ok = 0;
+    for (const fl of Array.from(files || [])) {
+      try {
+        const uri = await compressImage(fl, 1000, 0.72);
+        if (mode === "single") imgField.value = uri; else gal.push(uri);
+        ok++;
+      } catch (e) { toast("Image illisible : " + fl.name); }
+    }
+    galField.value = JSON.stringify(gal);
+    render();
+    if (ok) toast(ok + " photo(s) ajoutée(s) ✓");
+  }
+
+  filesIn.addEventListener("change", function () { addFiles(filesIn.files); filesIn.value = ""; });
+  addBtn.addEventListener("click", function () {
+    const u = urlIn.value.trim();
+    if (!/^(https?:\/\/|images\/|data:image\/)/i.test(u)) { toast("URL invalide (http… ou images/…)"); return; }
+    if (mode === "single") imgField.value = u; else gal.push(u);
+    galField.value = JSON.stringify(gal);
+    urlIn.value = "";
+    render();
+  });
+  render();
+}
 function emptyRow(cols, msg) { return `<tr><td colspan="${cols}"><div class="empty-admin"><strong>Rien pour le moment</strong>${msg}</div></td></tr>`; }
 function searchBox(ph) { return `<input type="search" class="adm-search" data-search placeholder="${ph || "Rechercher…"}" aria-label="Recherche">`; }
 
@@ -257,7 +341,7 @@ function rentalForm(p) {
       ${f("sizes", "Tailles (séparées par des virgules)", (p.sizes || []).join(", "), { placeholder: "36, 38, 40" })}
       ${f("price", "Prix par jour (DH) *", p.price != null ? p.price : "", { type: "number" })}
       ${f("icon", "Icône illustrative", p.icon || "caftan", { type: "select", options: Object.keys(ICON_LIST) })}
-      ${f("img", "Photo (URL)", p.img || "", { type: "url", placeholder: "https://… ou images/mon-caftan.jpg", hint: "Laissez vide pour l'illustration élégante automatique." })}
+      ${mediaBlockHTML("gallery", p)}
       ${f("available", "Actuellement disponible à la location", p.available !== false, { type: "checkbox" })}
       ${f("isNew", "Afficher dans « Nos nouveautés »", !!p.isNew, { type: "checkbox" })}
       ${f("desc", "Description", p.desc, { type: "textarea", full: true })}
@@ -265,10 +349,13 @@ function rentalForm(p) {
     </div>`;
   openModal(isNew ? "Nouveau caftan à louer" : "Modifier — " + p.name, fields, v => {
     if (!v.name || !v.price) return "Le nom et le prix sont obligatoires.";
+    let gal = [];
+    try { gal = JSON.parse(v.gallery || "[]").filter(Boolean); } catch (e) {}
     const obj = {
       name: v.name, style: v.style, color: v.color, colorHex: v.colorHex,
       sizes: v.sizes.split(",").map(s => s.trim()).filter(Boolean),
-      price: Number(v.price), icon: v.icon, img: v.img,
+      price: Number(v.price), icon: v.icon,
+      img: gal.length ? null : (v.img || null), gallery: gal,
       available: !!v.available, isNew: !!v.isNew, desc: v.desc,
       conditions: v.conditions.split("\n").map(s => s.trim()).filter(Boolean),
       availability: p.availability || {}
@@ -276,6 +363,7 @@ function rentalForm(p) {
     if (isNew) { obj.id = DB.id("r"); DB.data.rentals.unshift(obj); }
     else Object.assign(DB.data.rentals.find(x => x.id === p.id), obj);
   });
+  wireMediaBlock("gallery");
 }
 
 function shopForm(p) {
@@ -291,23 +379,27 @@ function shopForm(p) {
       ${f("sizes", "Tailles (virgules)", (p.sizes || []).join(", "), { placeholder: "S, M, L ou 38, 40, 42" })}
       ${f("colors", "Couleurs (virgules)", (p.colors || []).join(", "), { placeholder: "Émeraude, Doré" })}
       ${f("icon", "Icône illustrative", p.icon || "caftan", { type: "select", options: Object.keys(ICON_LIST) })}
-      ${f("img", "Photo (URL)", p.img || "", { type: "url", hint: "Laissez vide pour l'illustration automatique." })}
+      ${mediaBlockHTML("gallery", p)}
       ${f("isNew", "Afficher dans « Nos nouveautés »", !!p.isNew, { type: "checkbox" })}
       ${f("desc", "Description", p.desc, { type: "textarea", full: true })}
     </div>`;
   openModal(isNew ? "Nouveau produit boutique" : "Modifier — " + p.name, fields, v => {
     if (!v.name || !v.price) return "Le nom et le prix sont obligatoires.";
+    let gal = [];
+    try { gal = JSON.parse(v.gallery || "[]").filter(Boolean); } catch (e) {}
     const obj = {
       name: v.name, category: v.category, price: Number(v.price),
       oldPrice: v.oldPrice ? Number(v.oldPrice) : null,
       stock: Number(v.stock) || 0,
       sizes: v.sizes.split(",").map(s => s.trim()).filter(Boolean),
       colors: v.colors.split(",").map(s => s.trim()).filter(Boolean),
-      icon: v.icon, img: v.img, isNew: !!v.isNew, desc: v.desc
+      icon: v.icon, img: gal.length ? null : (v.img || null), gallery: gal,
+      isNew: !!v.isNew, desc: v.desc
     };
     if (isNew) { obj.id = DB.id("s"); DB.data.shop.unshift(obj); }
     else Object.assign(DB.data.shop.find(x => x.id === p.id), obj);
   });
+  wireMediaBlock("gallery");
 }
 
 function accForm(p) {
@@ -321,15 +413,16 @@ function accForm(p) {
       ${f("price", "Prix de location (DH/jour) *", p.price != null ? p.price : "", { type: "number" })}
       ${f("available", "Actuellement disponible", p.available !== false, { type: "checkbox" })}
       ${f("icon", "Icône illustrative", p.icon || "tray", { type: "select", options: Object.keys(ICON_LIST) })}
-      ${f("img", "Photo (URL)", p.img || "", { type: "url", full: true, hint: "Laissez vide pour l'illustration automatique." })}
+      ${mediaBlockHTML("single", p)}
       ${f("desc", "Description", p.desc, { type: "textarea", full: true })}
     </div>`;
   openModal(isNew ? "Nouvel accessoire" : "Modifier — " + p.name, fields, v => {
     if (!v.name || !v.price) return "Le nom et le prix sont obligatoires.";
-    const obj = { name: v.name, category: v.category, price: Number(v.price), available: !!v.available, icon: v.icon, img: v.img, desc: v.desc };
+    const obj = { name: v.name, category: v.category, price: Number(v.price), available: !!v.available, icon: v.icon, img: v.img || null, desc: v.desc };
     if (isNew) { obj.id = DB.id("a"); DB.data.accessories.unshift(obj); }
     else Object.assign(DB.data.accessories.find(x => x.id === p.id), obj);
   });
+  wireMediaBlock("single");
 }
 
 function packForm(pk) {
@@ -424,7 +517,7 @@ function partyForm(p) {
       ${f("occasion", "Occasion", p.occasion || "Fiançailles", { type: "select", options: occs })}
       ${f("price", "Tarif de départ (DH) *", p.price != null ? p.price : "", { type: "number" })}
       ${f("icon", "Icône illustrative", p.icon || "tray", { type: "select", options: Object.keys(ICON_LIST) })}
-      ${f("img", "Photo (URL)", p.img || "", { type: "url", hint: "Laissez vide pour l'illustration automatique." })}
+      ${mediaBlockHTML("single", p)}
       ${f("available", "Actuellement proposé sur le site", p.available !== false, { type: "checkbox" })}
       ${f("popular", "Badge « ★ Populaire »", !!p.popular, { type: "checkbox" })}
       ${f("desc", "Description courte", p.desc, { type: "textarea", full: true, rows: 2 })}
@@ -434,12 +527,13 @@ function partyForm(p) {
     if (!v.name || v.price === "") return "Le nom et le tarif sont obligatoires.";
     const obj = {
       name: v.name, occasion: v.occasion, price: Number(v.price),
-      icon: v.icon, img: v.img, available: !!v.available, popular: !!v.popular,
+      icon: v.icon, img: v.img || null, available: !!v.available, popular: !!v.popular,
       desc: v.desc, includes: v.includes.split("\n").map(s => s.trim()).filter(Boolean)
     };
     if (isNew) { obj.id = DB.id("pt"); DB.data.parties.unshift(obj); }
     else Object.assign(DB.data.parties.find(x => x.id === p.id), obj);
   });
+  wireMediaBlock("single");
 }
 
 function viewParties() {
