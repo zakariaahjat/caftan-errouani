@@ -292,7 +292,7 @@ h3{font-size:clamp(1.25rem,2vw,1.55rem)}
 .testi-author strong{display:block;color:var(--g900);font-size:.97rem}
 .testi-author span{font-size:.82rem;color:var(--muted)}
 
-.insta-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:1rem}
+  .insta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
 .insta-tile{position:relative;aspect-ratio:1;border-radius:var(--radius-sm);overflow:hidden;cursor:pointer}
 .insta-tile img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
 .insta-tile:hover img{transform:scale(1.1) rotate(1deg)}
