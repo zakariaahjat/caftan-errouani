@@ -321,7 +321,9 @@ function initRentalDetail() {
     DB.save();
     showToast("Demande envoyée ✓ Finalisons sur WhatsApp !");
     setTimeout(() => {
-      window.open(waLink(`Bonjour ${SITE.name} ! Je souhaite réserver « ${p.name} » du ${from} au ${to} (${money(p.price)}/jour). — ${name}`), "_blank");
+      const msg = `Bonjour ${SITE.name} ! Je souhaite réserver « ${p.name} » du ${from} au ${to} (${money(p.price)}/jour).\n👤 ${name}\n📞 ${phone}` +
+        (note ? `\n📝 ${note}` : "");
+      window.open(waLink(msg), "_blank");
     }, 600);
   });
 }
@@ -574,6 +576,11 @@ function initCheckout() {
     DB.save();
     Cart.clear();
     refreshCartBadge();
+    const waSummary = `Bonjour ${SITE.name} ! Nouvelle commande ${order.ref} :\n` +
+      order.items.map(i => `• ${i.name} ×${i.qty}`).join("\n") +
+      `\n💰 Total : ${money(order.total)} (${order.customer.payment})\n🚚 ${order.customer.delivery === "point" ? "Point relais" : "Domicile"} — ${order.customer.city}, ${order.customer.address}\n👤 ${order.customer.name} — 📞 ${order.customer.phone}` +
+      (order.customer.note ? `\n📝 ${order.customer.note}` : "");
+    setTimeout(() => window.open(waLink(waSummary), "_blank"), 600);
     wrap.innerHTML = `
     <div class="success-panel">
       <div class="success-icon">${svgIcon(UI_ICONS.check, 40)}</div>
@@ -727,7 +734,12 @@ function initContact() {
     if (!name || !message) { showToast("Nom et message sont requis 🙂"); return; }
     DB.data.messages.push({ id: DB.id("m"), name, phone, email, subject, message, read: false, created: new Date().toISOString() });
     DB.save();
-    showToast("Message envoyé ✓ Nous répondons sous 24h !");
+    showToast("Message envoyé ✓ Finalisons sur WhatsApp !");
+    const waMsg = `Bonjour ${SITE.name} ! Nouveau message du site :\n👤 ${name}` +
+      (phone ? `\n📞 ${phone}` : "") +
+      (email ? `\n✉️ ${email}` : "") +
+      `\n📌 ${subject || "Contact"}\n\n${message}`;
+    setTimeout(() => window.open(waLink(waMsg), "_blank"), 600);
     form.reset();
   });
 }

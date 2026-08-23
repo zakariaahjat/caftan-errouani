@@ -615,7 +615,7 @@ function viewOrders() {
             <a class="abtn" target="_blank" rel="noopener" href="${waLink(`Bonjour ${o.customer.name}, au sujet de votre commande ${o.ref} chez ${SITE.name}…`)}">WhatsApp</a>
             <button class="abtn abtn-danger" data-del="orders|${o.id}">Suppr.</button>
           </div></td>
-        </tr>`).join("") || emptyRow(7, "Les commandes du site arriveront ici en temps réel.")}
+        </tr>`).join("") || emptyRow(7, "Les commandes vous parviennent aussi par WhatsApp 📲. Celles passées sur cet appareil s'affichent ici.")}
       </tbody>
     </table></div>
   </div>`;
@@ -648,7 +648,7 @@ function viewReservations() {
             <a class="abtn" target="_blank" rel="noopener" href="${waLink(`Bonjour ${r.name}, concernant votre demande de réservation pour « ${r.productName} » du ${r.from} au ${r.to}…`)}">WhatsApp</a>
             <button class="abtn abtn-danger" data-del="reservations|${r.id}">Suppr.</button>
           </div></td>
-        </tr>`).join("") || emptyRow(5, "Les demandes envoyées depuis les fiches caftans arriveront ici.")}
+        </tr>`).join("") || emptyRow(5, "Chaque demande de réservation vous arrive aussi sur WhatsApp 📲. Sur cet appareil, elle s'affiche également ici.")}
       </tbody>
     </table></div>
   </div>`;
@@ -746,7 +746,7 @@ function viewMessages() {
           <button class="abtn" data-msg-read="${m.id}">${m.read ? "Marquer non lu" : "Marquer lu"}</button>
           <button class="abtn abtn-danger" data-del="messages|${m.id}">Supprimer</button>
         </div>
-      </div>`).join("") || `<div class="empty-admin"><strong>Aucun message</strong>Les formulaires de contact et demandes de devis arriveront ici.</div>`}
+      </div>`).join("") || `<div class="empty-admin"><strong>Aucun message</strong>Les messages de contact vous arrivent aussi sur WhatsApp 📲 ; ils sont listés ici s'ils ont été envoyés depuis cet appareil.</div>`}
   </div>`;
   bindEditButtons();
 }
