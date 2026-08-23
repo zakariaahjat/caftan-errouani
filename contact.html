@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact &amp; Rendez-vous — Caftan Errouani Marrakech</title>
+  <meta name="description" content="Contactez Caftan Errouani à Marrakech : rendez-vous d'essayage, questions location et vente caftans. WhatsApp, téléphone et showroom Guéliz.">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/contact.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="contact">
+<div id="site-header"></div>
+
+<main>
+  <section class="page-hero pattern-bg">
+    <div class="container">
+      <span class="eyebrow">Nous sommes là pour vous</span>
+      <h1>Contact &amp; rendez-vous</h1>
+      <p class="lead">Une question, une envie, une date à réserver ? Écrivez-nous — réponse sous 24h ouvrées.</p>
+    </div>
+  </section>
+
+  <section class="section-tight container">
+    <div class="contact-layout">
+      <div>
+        <div class="contact-cards">
+          <div class="contact-card reveal in">
+            <span class="value-icon">📍</span>
+            <h4>Showroom</h4>
+            <p>Quartier Guéliz<br>Marrakech, Maroc</p>
+          </div>
+          <div class="contact-card reveal in d1">
+            <span class="value-icon">💬</span>
+            <h4>WhatsApp direct</h4>
+            <a class="js-wa-link" target="_blank" rel="noopener" href="#">Le plus rapide — photos &amp; dispo en direct</a>
+          </div>
+          <div class="contact-card reveal in d2">
+            <span class="value-icon">📞</span>
+            <h4>Téléphone</h4>
+            <a href="tel:212600000000">+212 6 00 00 00 00</a>
+          </div>
+          <div class="contact-card reveal in d3">
+            <span class="value-icon">🕐</span>
+            <h4>Horaires</h4>
+            <p>Lun – Sam : 10h – 19h<br>Dimanche : sur rendez-vous</p>
+          </div>
+        </div>
+        <div class="map-box">
+          <svg class="map-pattern" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="mp" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M0 40L40 0M-10 10L10 -10M30 50L50 30" stroke="#175247" stroke-opacity=".12" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#mp)"/></svg>
+          <div class="pin">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="margin:0 auto .8rem;display:block"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          </div>
+          <strong>Maison Errouani</strong>
+          <p>Guéliz, Marrakech — adresse précise communiquée à la prise de rendez-vous.</p>
+        </div>
+      </div>
+
+      <div class="reserve-box reveal in d1">
+        <h2 style="margin-bottom:.4rem">Écrivez-nous</h2>
+        <form id="contact-form">
+          <div class="form-row">
+            <div class="form-field"><label for="ct-name">Nom complet *</label><input type="text" id="ct-name" required placeholder="Votre nom"></div>
+            <div class="form-field"><label for="ct-phone">Téléphone / WhatsApp</label><input type="tel" id="ct-phone" placeholder="06 XX XX XX XX"></div>
+          </div>
+          <div class="form-field"><label for="ct-email">Email</label><input type="email" id="ct-email" placeholder="vous@exemple.com"></div>
+          <div class="form-field"><label for="ct-subject">Sujet</label>
+            <select id="ct-subject">
+              <option>Location de caftan</option>
+              <option>Achat boutique</option>
+              <option>Accessoires fiançailles</option>
+              <option>Décoration d'événement</option>
+              <option>Rendez-vous essayage</option>
+              <option>Autre demande</option>
+            </select>
+          </div>
+          <div class="form-field"><label for="ct-message">Votre message *</label><textarea id="ct-message" rows="5" required placeholder="Dites-nous tout : date de l'événement, style recherché…"></textarea></div>
+          <button type="submit" class="btn btn-primary btn-lg btn-block">Envoyer le message ✓</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>
+  bindGlobalUI();
+  initContact();
+  document.querySelectorAll(".js-wa-link").forEach(a => a.href = waLink("Bonjour " + SITE.name + " !"));
+</script>
+</body>
+</html>

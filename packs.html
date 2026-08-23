@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Packs de Fête Tout-en-Un — Fiançailles, Anniversaire, Baby Shower | Marrakech</title>
+  <meta name="description" content="Packs fêtes tout-en-un à Marrakech : caftan + accessoires + décoration pour fiançailles, anniversaire, baby shower et henné. Un seul contact, budget maîtrisé.">
+  <meta name="keywords" content="pack fiançailles Marrakech, pack anniversaire, baby shower organisation, henné traditionnel, caftan décoration pack">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/packs.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="packs">
+<div id="site-header"></div>
+
+<main>
+  <section class="page-hero pattern-bg">
+    <div class="container">
+      <span class="eyebrow">Tout-en-un, sans stress ✨</span>
+      <h1>Nos packs fêtes</h1>
+      <p class="lead">La tenue, l'accessoire et la décoration réunis dans une seule réservation — pensés pour chaque occasion.</p>
+    </div>
+  </section>
+
+  <section class="section-tight container">
+    <div class="filters-bar reveal in">
+      <div class="filter-group" style="flex:2 1 280px">Occasion
+        <div id="party-cats" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.35rem"></div>
+      </div>
+    </div>
+
+    <p class="results-count" id="parties-count"></p>
+    <div class="grid-products" id="parties-grid"></div>
+  </section>
+
+  <section class="section container">
+    <div class="cta-band reveal">
+      <h2>Votre occasion n'est pas listée ?</h2>
+      <p>Aïd, mariage, soirée privée… nous composons un pack sur mesure pour vous.</p>
+      <a class="btn btn-wa btn-lg js-packs-wa" target="_blank" rel="noopener" href="#">Demander un pack sur mesure</a>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>
+  bindGlobalUI();
+  initPacks();
+  document.querySelectorAll(".js-packs-wa").forEach(a => a.href = waLink("Bonjour " + SITE.name + ", je souhaite un pack sur mesure."));
+</script>
+</body>
+</html>

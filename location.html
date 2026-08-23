@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location de Caftans à Marrakech — Caftans Mariage &amp; Fiançailles | Errouani</title>
+  <meta name="description" content="Louez un caftan marocain à Marrakech dès 350 DH/jour. Caftans mariage, fiançailles et takchitas avec calendrier de disponibilité en ligne. Réservation WhatsApp rapide.">
+  <meta name="keywords" content="location caftan Marrakech, caftan location, louer caftan mariage, caftan fiançailles, takchita location Marrakech">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/location.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="location">
+<div id="site-header"></div>
+
+<main>
+  <section class="page-hero pattern-bg">
+    <div class="container">
+      <span class="eyebrow">Collection exclusive</span>
+      <h1>Caftans à louer</h1>
+      <p class="lead">Des pièces d'exception pour vos mariages, fiançailles et fêtes — essayage sur rendez-vous dans notre showroom de Guéliz.</p>
+    </div>
+  </section>
+
+  <section class="section-tight container">
+    <div class="filters-bar reveal in">
+      <label class="filter-group">Couleur
+        <select id="f-color"><option value="">Toutes</option></select>
+      </label>
+      <label class="filter-group">Taille
+        <select id="f-size"><option value="">Toutes</option></select>
+      </label>
+      <label class="filter-group">Style
+        <select id="f-style"><option value="">Tous</option></select>
+      </label>
+      <label class="filter-group">Prix / jour
+        <input type="range" id="f-price" min="300" max="1000" step="50" value="1000">
+        <output id="f-price-val">≤ 1 000 DH</output>
+      </label>
+      <label class="filter-group">Disponibilité
+        <span><input type="checkbox" id="f-avail" checked style="width:auto;margin-right:.4rem"> Disponibles uniquement</span>
+      </label>
+    </div>
+
+    <p class="results-count" id="loc-count"></p>
+    <div class="grid-products" id="rentals-grid"></div>
+  </section>
+
+  <section class="section container">
+    <div class="cta-band reveal">
+      <h2>Une question sur une pièce ?</h2>
+      <p>Nous répondons en quelques heures sur WhatsApp — essayages sur rendez-vous.</p>
+      <a id="loc-wa" class="btn btn-wa btn-lg" target="_blank" rel="noopener" href="#">Discuter sur WhatsApp</a>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>bindGlobalUI(); initLocation();</script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+function futureDate(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+const AVAIL_SAMPLE = {};
+AVAIL_SAMPLE[futureDate(3)] = "reserved";
+AVAIL_SAMPLE[futureDate(4)] = "reserved";
+AVAIL_SAMPLE[futureDate(11)] = "blocked";
+
+function seedRentals() {
+  return [
+    { id: "ra", name: "Takchita Émeraude Randa", style: "Takchita", color: "Émeraude", colorHex: "#0E5A45",
+      sizes: ["36", "38", "40", "42"], price: 750, available: true, isNew: true, icon: "takchita",
+      gallery: ["images/a1.jpg", "images/a2.jpg", "images/a3.jpg"],
+      desc: "Somptueuse takchita émeraude brodée de fils dorés, ceinture mdamma assortie incluse. Une pièce majestueuse pour votre jour le plus précieux.",
+      conditions: ["Location de 1 à 3 jours", "Caution de 1000 DH remboursable", "Nettoyage inclus", "Retrait à Marrakech ou livraison"],
+      availability: Object.assign({}, AVAIL_SAMPLE) },
+    { id: "rb", name: "Caftan Rose Poudré Yasmine", style: "Moderne", color: "Rose poudré", colorHex: "#D9A8A0",
+      sizes: ["34", "36", "38"], price: 480, available: true, isNew: true, icon: "caftan",
+      gallery: ["images/b1.jpg", "images/b2.jpg", "images/b3.jpg"],
+      desc: "Caftan en mousseline rose poudré aux finitions sfifa dorées. Léger et raffiné, parfait pour une fiançailles ou un mariage.",
+      conditions: ["Location de 1 à 3 jours", "Caution de 500 DH remboursable", "Nettoyage inclus"],
+      availability: {} },
+    { id: "rc", name: "Takchita Bordeaux Royal Fès", style: "Takchita", color: "Bordeaux", colorHex: "#6B2230",
+      sizes: ["38", "40", "42", "44"], price: 900, available: true, isNew: false, icon: "takchita",
+      gallery: ["images/c1.jpg", "images/c2.jpg", "images/c3.jpg"],
+      desc: "Takchita d'exception inspirée des grandes maisons fassies. Broderie randa et passementerie dorée sur velours bordeaux profond.",
+      conditions: ["Location de 2 jours maximum", "Caution de 2000 DH", "Essayage sur rendez-vous", "Retouches offertes"],
+      availability: {} },
+    { id: "rd", name: "Caftan Ivoire Sfifa Dorée", style: "Traditionnel", color: "Ivoire", colorHex: "#EFE6D2",
+      sizes: ["36", "38", "40", "42"], price: 600, available: true, isNew: false, icon: "caftan",
+      gallery: ["images/d1.jpg", "images/d2.jpg", "images/d3.jpg"],
+      desc: "L'élégance intemporelle de l'ivoire rehaussée d'une sfifa dorée cousue main. Idéal pour le jour du henné.",
+      conditions: ["Location de 1 à 3 jours", "Caution de 800 DH", "Nettoyage inclus"],
+      availability: {} },
+    { id: "re", name: "Djellaba Sauge Aïcha", style: "Djellaba", color: "Vert sauge", colorHex: "#8FA98B",
+      sizes: ["S", "M", "L"], price: 350, available: true, isNew: false, icon: "djellaba",
+      gallery: ["images/e1.jpg", "images/e2.jpg", "images/e3.jpg"],
+      desc: "Djellaba fluide en lin naturel, coupe moderne et confortable pour vos journées de fête.",
+      conditions: ["Location de 1 à 3 jours", "Caution de 300 DH"],
+      availability: {} }
+  ];
+}
+
+function seedShop() {
+  return [
+    { id: "vf", name: "Caftan Velours Nour", category: "Caftans", price: 1890, oldPrice: 2400,
+      sizes: ["36", "38", "40", "42"], stock: 3, isNew: true, icon: "caftan", colors: ["Émeraude", "Ivoire"],
+      gallery: ["images/f1.jpg", "images/f2.jpg", "images/f3.jpg"],
+      desc: "Caftan en velours avec tarz raffiné cousu main. Coupe cintrée, doublure en coton doux." },
+    { id: "vh", name: "Caftan Soie Terz Fassi", category: "Caftans", price: 2450, oldPrice: null,
+      sizes: ["38", "40", "42"], stock: 2, isNew: true, icon: "caftan", colors: ["Beige"],
+      gallery: ["images/h1.jpg", "images/h2.jpg", "images/h3.jpg"],
+      desc: "Soie naturelle ornée d'un terz rbati floral. Pièce unique confectionnée par nos artisans." },
+    { id: "vi", name: "Caftan Mousseline Perle", category: "Caftans", price: 1650, oldPrice: null,
+      sizes: ["36", "38", "40"], stock: 4, isNew: false, icon: "caftan", colors: ["Ivoire", "Or"],
+      gallery: ["images/i1.jpg", "images/i2.jpg", "images/i3.jpg"],
+      desc: "Mousseline georgette délicate, sfifa dorée et boutons aqad faits main." },
+    { id: "vj", name: "Ensemble Ghandoura & Saroual", category: "Ensembles traditionnels", price: 1250, oldPrice: null,
+      sizes: ["36", "38", "40", "42"], stock: 4, isNew: true, icon: "ensemble", colors: ["Sable", "Noir"],
+      gallery: ["images/j1.jpg", "images/j2.jpg", "images/j3.jpg"],
+      desc: "Ghandoura brodée assortie à un saroual fluide. L'alliance parfaite entre tradition et modernité." },
+    { id: "vo", name: "Takchita Deux Pièces Prestige", category: "Takchitas", price: 4200, oldPrice: 5900,
+      sizes: ["38", "40", "42"], stock: 2, isNew: false, icon: "takchita", colors: ["Bordeaux", "Doré"],
+      gallery: ["images/o1.jpg", "images/o2.jpg", "images/o3.jpg"],
+      desc: "Takchita deux pièces d'exception, broderie randa et ceinture mdamma cristal. La pièce reine de notre collection." }
+  ];
+}
+
+function seedAccessories() {
+  return [
+    /* ===== 👰‍♀️ La Mariée ===== */
+    { id: "b1", name: "Taj / Couronne de mariée", nameAr: "التاج — Taj", category: "La Mariée", price: 250, available: true, icon: "star2",
+      desc: "Couronne scintillante de strass et perles, la touche royale du jour J." },
+    { id: "b2", name: "Jouhara — Parure de joyaux", nameAr: "الجوهرة — Jouhara", category: "La Mariée", price: 180, available: true, icon: "gift",
+      desc: "Parure complète inspirée des joyas traditionnelles, finition dorée nacrée." },
+    { id: "b3", name: "Khelkhal (bracelet de cheville)", nameAr: "الخلخال — Khlkhal", category: "La Mariée", price: 80, available: true, icon: "star",
+      desc: "Paire de khelkhal articulés, tintement délicat à chaque pas de la mariée." },
+    { id: "b4", name: "Mdamma / Ceinture brodée", nameAr: "الحزام — Mdamma", category: "La Mariée", price: 120, available: true, icon: "cushion",
+      desc: "Ceinture mdamma brodée main de fils dorés, ajustable, sublime le caftan." },
+    { id: "b5", name: "Collier de cérémonie", nameAr: "العقد — Collier", category: "La Mariée", price: 100, available: true, icon: "star2",
+      desc: "Collier plastron aux motifs berbères et perles nacrées." },
+    { id: "b6", name: "Boucles d'oreilles", nameAr: "الأقراط — Boucles d'oreilles", category: "La Mariée", price: 60, available: true, icon: "star",
+      desc: "Grandes boucles pendantes dorées, légères à porter toute la journée." },
+    { id: "b7", name: "Bagues & écrin", nameAr: "الخواتم — Bagues", category: "La Mariée", price: 50, available: true, icon: "box",
+      desc: "Ensemble de bagues assorties présentées dans leur écrin de velours." },
+    { id: "b8", name: "Bracelets aqad", nameAr: "الأساور — Bracelets", category: "La Mariée", price: 70, available: true, icon: "star",
+      desc: "Bracelets aqad tissés main, empilables pour un effet précieux." },
+    { id: "b9", name: "Peigne de mariée décoré", nameAr: "مشط الشعر المزوق — Peigne", category: "La Mariée", price: 60, available: true, icon: "mirror",
+      desc: "Peigne orné de perles et camées dorés pour un chignon parfait." },
+    { id: "b10", name: "Épingles à cheveux perlées", nameAr: "دبابيس الشعر — Épingles", category: "La Mariée", price: 40, available: true, icon: "star",
+      desc: "Lot d'épingles à cheveux strass et perles, discrètes et lumineuses." },
+    { id: "b11", name: "Taj Maghribi traditionnel", nameAr: "تاج الرأس المغربي — Taj Maghribi", category: "La Mariée", price: 300, available: true, icon: "star2",
+      desc: "Le grand taj marocain des cérémonies traditionnelles, pièce imposante et majestueuse." },
+
+    /* ===== 🪭 Amariya & Cérémonie ===== */
+    { id: "m1", name: "L'Amariya", nameAr: "العمارية — Amariya", category: "Amariya & Cérémonie", price: 900, available: true, icon: "gift",
+      desc: "Amariya drapée de voiles et dorures : le trône de la mariée, montage inclus." },
+    { id: "m2", name: "Le Houdja", nameAr: "الهودج — Howdah", category: "Amariya & Cérémonie", price: 700, available: false, icon: "gift",
+      desc: "Houdja porté traditionnellement, entrée de mariée spectaculaire garantie." },
+    { id: "m3", name: "Parasol marocain", nameAr: "المظلة التقليدية — Parasol", category: "Amariya & Cérémonie", price: 200, available: true, icon: "vase",
+      desc: "Mchaba brodé à franges dorées, ombre élégante pour la mariée en extérieur." },
+    { id: "m4", name: "Éventails traditionnels", nameAr: "المراوح — Éventails", category: "Amariya & Cérémonie", price: 50, available: true, icon: "mirror",
+      desc: "Éventails décorés à la main, parfaits pour les photos et la danse du henné." },
+    { id: "m5", name: "Chandelier marocain", nameAr: "الشمعدان — Chandelier", category: "Amariya & Cérémonie", price: 150, available: true, icon: "candle",
+      desc: "Chandelier ciselé hauteur 70 cm pour un éclat chaleureux." },
+    { id: "m6", name: "Lanternes marocaines", nameAr: "الفوانيس — Lanternes", category: "Amariya & Cérémonie", price: 90, available: true, icon: "lantern",
+      desc: "Fanous ajourés au jeu de lumière magique, lot de 3 disponibles." },
+    { id: "m7", name: "Mabkhara / Brûle-parfum", nameAr: "مبخرة — Mabkhara", category: "Amariya & Cérémonie", price: 70, available: true, icon: "lantern",
+      desc: "Brûle-parfum cuivre ciselé pour parfumer l'arrivée des invités." },
+    { id: "m8", name: "Plateau marocain de présentation", nameAr: "صينية تقديم — Plateau", category: "Amariya & Cérémonie", price: 130, available: true, icon: "tray",
+      desc: "Grand plateau martelé doré sur pieds sculptés, pièce maîtresse du rituel." },
+    { id: "m9", name: "Verres à thé marocains", nameAr: "كؤوس الشاي — Verres à thé", category: "Amariya & Cérémonie", price: 60, available: true, icon: "teapot",
+      desc: "Verres gravés colorés et dorés, service authentique pour vos invités." },
+
+    /* ===== 🎉 Décoration de fête ===== */
+    { id: "d1", name: "Tables de bienvenue décorées", nameAr: "طاولات الضيافة", category: "Décoration de fête", price: 400, available: true, icon: "box",
+      desc: "Mise en place de la table d'accueil : dragées, amandes, cadeaux invités." },
+    { id: "d2", name: "Fauteuils des mariés", nameAr: "كراسي العروسين", category: "Décoration de fête", price: 700, available: false, icon: "cushion",
+      desc: "Duo de fauteuils habillés tissus précieux et broderies dorées." },
+    { id: "d3", name: "Backdrop photo", nameAr: "خلفية التصوير — Backdrop", category: "Décoration de fête", price: 350, available: true, icon: "mirror",
+      desc: "Fond photobooth tentures + néons dorés, installation comprise." },
+    { id: "d4", name: "Arche florale", nameAr: "ستاند الزهور — Arche florale", category: "Décoration de fête", price: 450, available: true, icon: "vase",
+      desc: "Arche fleurie personnalisable aux couleurs de votre événement." },
+    { id: "d5", name: "Fleurs fraîches & artificielles", nameAr: "الزهور الصناعية والطبيعية", category: "Décoration de fête", price: 180, available: true, icon: "vase",
+      desc: "Compositions florales sur mesure, centres de table et bouquets." },
+    { id: "d6", name: "Bougies & chandelles dorées", nameAr: "شموع وBougies", category: "Décoration de fête", price: 80, available: true, icon: "candle",
+      desc: "Lot de chandelles décorées de fils dorés, ambiance feutrée garantie." },
+    { id: "d7", name: "Guirlandes de lanternes", nameAr: "فوانيس معلقة", category: "Décoration de fête", price: 100, available: true, icon: "lantern",
+      desc: "Suspension de mini-fanous, ciel étoilé marocain au-dessus des tables." },
+    { id: "d8", name: "Miroirs décorés", nameAr: "مرايا مزخرفة", category: "Décoration de fête", price: 140, available: true, icon: "mirror",
+      desc: "Miroirs arabisants gravés, profondeur et lumière pour votre décor." },
+    { id: "d9", name: "Rideaux & tentures", nameAr: "الستائر", category: "Décoration de fête", price: 220, available: true, icon: "gift",
+      desc: "Voilages et tentures premium, pose soignée murs et plafonds." },
+    { id: "d10", name: "Coussins marocains brodés", nameAr: "وسائد مغربية", category: "Décoration de fête", price: 30, available: true, icon: "cushion",
+      desc: "Coussins satin brodé main, confort et couleur pour les salons." },
+    { id: "d11", name: "Zarabi / Tapis marocains", nameAr: "زرابي مغربية", category: "Décoration de fête", price: 90, available: true, icon: "vase",
+      desc: "Tapis et zarabiya tissés, sol chaud et authentique pour vos espaces." },
+    { id: "d12", name: "Théière & brad chai traditionnel", nameAr: "طناجر/براد الشاي التقليدي", category: "Décoration de fête", price: 110, available: true, icon: "teapot",
+      desc: "Théière gravée de cérémonie, pièce forte du coin thé marocain." },
+    { id: "d13", name: "Plateaux en cuivre ciselé", nameAr: "صواني نحاسية", category: "Décoration de fête", price: 120, available: true, icon: "tray",
+      desc: "Plateaux cuivre martelés main, reflets ambrés sublimes en centre de table." }
+  ];
+}
+
+function seedPacks() {
+  return [
+    { id: "p1", name: "Essentiel", price: 2500, featured: false,
+      desc: "Une mise en place élégante pour votre fiançailles ou petite fête intime.",
+      includes: ["Coin traditionnel marocain (salons + coussins)", "Table décorée pour 10 personnes", "Chemin de table & centres dorés", "Bougies et lanternes", "Installation et rangement comprises"] },
+    { id: "p2", name: "Premium", price: 5500, featured: true,
+      desc: "La formule signature pour des fiançailles dont vos invités se souviendront.",
+      includes: ["Coin traditionnel premium avec tentures", "Tables décorées jusqu'à 30 personnes", "Néga & plateau henné traditionnels", "Arche florale ou fond photobooth", "Vaisselle dorée et présentoirs dragées", "Installation, coordination et rangement"] },
+    { id: "p3", name: "Sur-Mesure", price: 0, featured: false,
+      desc: "Votre vision, notre savoir-faire : nous créons une scénographie unique.",
+      includes: ["Étude personnalisée de votre projet", "Moodboard & palette de couleurs", "Fabrication de décors sur mesure", "Coordination le jour J", "Devis gratuit sous 48h"] }
+  ];
+}
+
+function seedParties() {
+  return [
+    { id: "pt1", name: "Pack Fiançailles Intime", occasion: "Fiançailles", price: 1900,
+      available: true, popular: true, icon: "tray",
+      desc: "L'essentiel pour une demande en mariage réussie, même à la maison.",
+      includes: ["Coin traditionnel : salons + coussins brodés", "Table basse décorée pour 8 invités", "Plateau d'alliances doré + boîte velours", "Bougies & lanternes marocaines", "Théière et verres traditionnels"] },
+    { id: "pt2", name: "Pack Anniversaire Princesse", occasion: "Anniversaire", price: 1200,
+      available: true, popular: false, icon: "candle",
+      desc: "Une table féerique et un coin photo pour une journée inoubliable.",
+      includes: ["Table décorée pour 10 enfants", "Guirlandes & ballons or / rose poudré", "Présentoir gâteau & douceurs", "Mini coin photo avec accessoires", "Vaisselle jetable premium dorée"] },
+    { id: "pt3", name: "Pack Baby Shower Baraka", occasion: "Baby shower", price: 1500,
+      available: true, popular: false, icon: "vase",
+      desc: "Douceur et traditions pour accueillir bébé avant l'heure.",
+      includes: ["Arche ballons pastel ou vert & or", "Table dragées & amandes voilées", "Coin photos « Oh my baby »", "Cadeaux invités offerts", "Installation & rangement inclus"] },
+    { id: "pt4", name: "Pack Henné Traditionnel", occasion: "Henné", price: 2200,
+      available: false, popular: true, icon: "lantern",
+      desc: "La néga, les plateaux, l'ambiance : toute la cérémonie du henné.",
+      includes: ["Néga à henné traditionnelle décorée", "Plateaux henné + bougies dorées", "Tentes & coussins marocains", "Caftan de henné à louer inclus 1 jour", "Artisane henné en option"] },
+    { id: "pt5", name: "Pack Aïd & Fêtes Familiales", occasion: "Aïd / Fête", price: 950,
+      available: true, popular: false, icon: "teapot",
+      desc: "Recevez vos invités comme un pro pendant les grandes occasions.",
+      includes: ["Salon marocain complet", "Service thé premium gravé", "Présentoir fruits secs & amandes", "Décoration de table Aïd", "Livraison & installation comprises"] },
+    { id: "pt6", name: "Pack Shooting Caftan", occasion: "Shooting photo", price: 700,
+      available: true, popular: false, icon: "mirror",
+      desc: "Accessoires et déco épurée pour sublimer vos photos et reels.",
+      includes: ["1 accessoire au choix (mdamma ou bijoux)", "Fond zellige portable", "Paravent marocain doré", "Conseils posing par notre équipe", "Durée : 4 heures"] }
+  ];
+}
+
+function seedOrders() {
+  return [];
+}
+function seedReservations() {
+  return [];
+}
+function seedMessages() {
+  return [];
+}
+
+function buildSeedDB() {
+  return {
+    settings: { adminPin: "1234" },
+    rentals: seedRentals(),
+    shop: seedShop(),
+    accessories: seedAccessories(),
+    packs: seedPacks(),
+    parties: seedParties(),
+    orders: seedOrders(),
+    reservations: seedReservations(),
+    messages: seedMessages()
+  };
+}

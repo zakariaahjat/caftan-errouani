@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon panier | Caftan Errouani</title>
+  <meta name="description" content="Votre panier — caftans et pièces marocaines à acheter.">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/panier.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="cart">
+<div id="site-header"></div>
+
+<main class="section-tight container" style="padding-top:2.5rem">
+  <div class="section-head">
+    <span class="eyebrow">Votre sélection</span>
+    <h1 style="font-size:clamp(1.9rem,3.4vw,2.9rem)">Mon panier</h1>
+  </div>
+  <div class="cart-layout">
+    <div id="cart-table"></div>
+    <aside class="summary-box reveal in" id="cart-summary">
+      <h3>Récapitulatif</h3>
+      <div class="sum-line"><span>Sous-total</span><strong id="cart-total">0 DH</strong></div>
+      <p class="p-meta">Frais de livraison calculés à l'étape suivante.</p>
+      <a class="btn btn-primary btn-block" href="checkout.html" style="margin-top:1rem">Passer la commande</a>
+      <a class="btn btn-outline btn-block" href="boutique.html" style="margin-top:.6rem">Continuer mes achats</a>
+    </aside>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>bindGlobalUI(); initPanier(); observeReveals();</script>
+</body>
+</html>

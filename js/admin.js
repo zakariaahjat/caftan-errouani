@@ -1,0 +1,943 @@
+const SESSION_KEY = "errouani_admin_session";
+const state = { section: "dash" };
+
+function $(sel) { return document.querySelector(sel); }
+
+let toastTimerA;
+function toast(msg) {
+  const t = $("#adm-toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimerA);
+  toastTimerA = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+const ICON_LIST = {
+  caftan: "Caftan", takchita: "Takchita", djellaba: "Djellaba", ensemble: "Ensemble / Blousa",
+  tray: "Plateau", box: "Boîte", candle: "Bougie", cushion: "Coussin / Mdamma",
+  mirror: "Présentoir", teapot: "Théière", lantern: "Lanterne", vase: "Vase / Fleurs", star: "Bijou / Étoile"
+};
+const SHOP_CATS = ["Caftans", "Takchitas", "Djellabas", "Ensembles traditionnels", "Accessoires"];
+const STYLES = ["Traditionnel", "Moderne", "Takchita", "Djellaba", "Blousa"];
+const ORDER_STATUS = ["Nouvelle", "Confirmée", "Expédiée", "Livrée", "Annulée"];
+const RES_STATUS = ["En attente", "Confirmée", "Refusée"];
+
+const CAL_ICON = '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
+const GIFT_ICON = '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/><path d="M12 8a3 3 0 1 0-3-3c0 2 3 3 3 3Zm0 0a3 3 0 1 1 3-3c0 2-3 3-3 3Z"/>';
+const NAV = [
+  ["dash", "Tableau de bord", UI_ICONS.sparkle],
+  ["rentals", "Caftans à louer", UI_ICONS.gem],
+  ["shop", "Boutique (vente)", UI_ICONS.cart],
+  ["acc", "Accessoires", UI_ICONS.star],
+  ["parties", "Packs fêtes", GIFT_ICON],
+  ["packs", "Formules déco", UI_ICONS.heart],
+  ["orders", "Commandes", UI_ICONS.truck],
+  ["reservations", "Réservations", UI_ICONS.ruler],
+  ["avail", "Disponibilités", CAL_ICON],
+  ["messages", "Messages", UI_ICONS.wa],
+  ["settings", "Paramètres", UI_ICONS.shield]
+];
+
+function renderNav(badges) {
+  $("#as-nav").innerHTML = NAV.map(n => {
+    const b = badges[n[0]];
+    return `<a href="#" data-sec="${n[0]}" class="${state.section === n[0] ? "active" : ""}">
+      ${svgIcon(n[2], 19)}<span>${n[1]}</span>
+      ${b ? `<span class="as-badge">${b}</span>` : ""}
+    </a>`;
+  }).join("");
+}
+
+function computeBadges() {
+  const db = DB.data;
+  return {
+    reservations: db.reservations.filter(r => r.status === "En attente").length || "",
+    messages: db.messages.filter(m => !m.read).length || "",
+    orders: db.orders.filter(o => o.status === "Nouvelle").length || ""
+  };
+}
+
+function go(section) {
+  state.section = section;
+  renderNav(computeBadges());
+  const titles = Object.fromEntries(NAV.map(n => [n[0], n[1]]));
+  $("#adm-title").textContent = titles[section];
+  const views = { dash: viewDash, rentals: viewRentals, shop: viewShop, acc: viewAcc, parties: viewParties, packs: viewPacks, orders: viewOrders, reservations: viewReservations, avail: viewAvail, messages: viewMessages, settings: viewSettings };
+  (views[section] || viewDash)();
+  $("#adm-side").classList.remove("open");
+}
+
+function openModal(title, fieldsHtml, onSave) {
+  $("#modal-title").textContent = title;
+  $("#modal-body").innerHTML = fieldsHtml;
+  $("#adm-modal").classList.add("show");
+  const saveBtn = $("#modal-save");
+  const clone = saveBtn.cloneNode(true);
+  saveBtn.replaceWith(clone);
+  if (!onSave) { clone.style.display = "none"; return; }
+  clone.style.display = "";
+  clone.addEventListener("click", () => {
+    const values = {};
+    document.querySelectorAll("#modal-body [data-f]").forEach(inp => {
+      if (inp.type === "checkbox") values[inp.dataset.f] = inp.checked;
+      else values[inp.dataset.f] = inp.value.trim();
+    });
+    const err = onSave(values);
+    if (err) { toast(err); return; }
+    closeModal();
+    DB.save();
+    go(state.section);
+    toast("Enregistré avec succès ✓");
+  });
+}
+function closeModal() { $("#adm-modal").classList.remove("show"); }
+
+function f(name, label, value, opts) {
+  opts = opts || {};
+  const full = opts.full ? "mf-full" : "";
+  if (opts.type === "textarea") {
+    return `<div class="mf-field ${full}"><label>${label}</label><textarea data-f="${name}" rows="${opts.rows || 3}" placeholder="${opts.placeholder || ""}">${esc(value == null ? "" : value)}</textarea>${opts.hint ? `<span class="mf-hint">${opts.hint}</span>` : ""}</div>`;
+  }
+  if (opts.type === "select") {
+    return `<div class="mf-field ${full}"><label>${label}</label><select data-f="${name}">${opts.options.map(o => `<option value="${esc(o)}" ${o === value ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`;
+  }
+  if (opts.type === "checkbox") {
+    return `<div class="mf-check mf-full"><input type="checkbox" data-f="${name}" id="cb-${name}" ${value ? "checked" : ""}><label for="cb-${name}">${label}</label></div>`;
+  }
+  return `<div class="mf-field ${full}"><label>${label}</label><input type="${opts.type || "text"}" data-f="${name}" value="${esc(value == null ? "" : value)}" placeholder="${opts.placeholder || ""}">${opts.hint ? `<span class="mf-hint">${opts.hint}</span>` : ""}</div>`;
+}
+
+function thumb(p) { return `<img src="${productImg(p)}"${imgAttrs(p)} alt="">`; }
+function emptyRow(cols, msg) { return `<tr><td colspan="${cols}"><div class="empty-admin"><strong>Rien pour le moment</strong>${msg}</div></td></tr>`; }
+function searchBox(ph) { return `<input type="search" class="adm-search" data-search placeholder="${ph || "Rechercher…"}" aria-label="Recherche">`; }
+
+function bindTableSearch() {
+  const inp = document.querySelector("#adm-content [data-search]");
+  if (!inp) return;
+  inp.addEventListener("input", () => {
+    const q = inp.value.trim().toLowerCase();
+    document.querySelectorAll("#adm-content tbody tr, #adm-content .msg-item").forEach(tr => {
+      tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+  });
+}
+
+function orderDetail(o) {
+  const rows = [
+    ["Référence", o.ref],
+    ["Date", new Date(o.created).toLocaleString("fr-FR")],
+    ["Cliente", o.customer.name],
+    ["Téléphone", o.customer.phone || "—"],
+    ["Ville", o.customer.city || "—"],
+    ["Adresse", o.customer.address || "—"],
+    ["Livraison", o.delivery || "—"],
+    ["Paiement", o.payment || "—"],
+    ["Note", o.customer.note || "—"]
+  ];
+  openModal("Commande " + o.ref, `
+    <table class="adm-table" style="margin-bottom:1rem"><tbody>
+      ${rows.map(r => `<tr><td style="width:120px;color:#8A7B5E;font-size:.85rem">${r[0]}</td><td style="font-size:.92rem">${esc(r[1])}</td></tr>`).join("")}
+    </tbody></table>
+    <strong>Articles commandés</strong>
+    <ul style="margin:.6rem 0 0 1.2rem;line-height:2">
+      ${o.items.map(i => `<li>${esc(i.name)} × ${i.qty} — ${money((i.price || 0) * i.qty)}</li>`).join("")}
+    </ul>
+    <div style="margin-top:1rem;text-align:right;font-size:1.15rem"><strong>Total : ${money(o.total)}</strong></div>
+    <div style="margin-top:1.2rem;display:flex;gap:.7rem">
+      <a class="btn btn-primary btn-sm" target="_blank" rel="noopener" href="${waLink(`Bonjour ${o.customer.name}, au sujet de votre commande ${o.ref} chez ${SITE.name}…`)}">Contacter sur WhatsApp</a>
+    </div>`,
+    null);
+}
+
+function viewDash() {
+  const db = DB.data;
+  const revenue = db.orders.filter(o => o.status !== "Annulée").reduce((t, o) => t + o.total, 0);
+  const pending = db.reservations.filter(r => r.status === "En attente");
+  const unread = db.messages.filter(m => !m.read).length;
+  const lowStock = db.shop.filter(p => !p.stock || p.stock <= 0);
+  const minPack = db.parties.length ? Math.min(...db.parties.map(p => p.price)) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = db.reservations
+    .filter(r => r.status !== "Refusée" && r.to >= today)
+    .sort((a, b) => String(a.from).localeCompare(String(b.from)))
+    .slice(0, 5);
+
+  const stat = (target, small, strong, em) => `
+    <div class="stat-card" data-go="${target}" role="button" tabindex="0">
+      <small>${small}</small><strong>${strong}</strong>
+      ${em ? `<em>${em}</em>` : ""}<span class="stat-arrow">→</span>
+    </div>`;
+
+  $("#adm-content").innerHTML = `
+  <div class="stat-grid">
+    ${stat("rentals", "Caftans à louer", db.rentals.length, db.rentals.filter(r => r.available !== false).length + " disponibles")}
+    ${stat("shop", "Produits boutique", db.shop.length, lowStock.length ? lowStock.length + " épuisé(s)" : "stock OK")}
+    ${stat("acc", "Accessoires", db.accessories.length, "")}
+    ${stat("parties", "Packs fêtes", db.parties.length, minPack != null ? "dès " + money(minPack) : "")}
+    ${stat("orders", "Chiffre d'affaires", money(revenue), db.orders.length + " commandes")}
+    ${stat("reservations", "Rés. en attente", pending.length, "")}
+    ${stat("messages", "Messages non lus", unread, "")}
+  </div>
+
+  ${(pending.length || lowStock.length || unread) ? `
+  <div class="adm-panel dash-alerts">
+    <div class="ap-head"><h3>⚠ À traiter en priorité</h3></div>
+    <div class="da-list">
+      ${pending.map(r => `<a href="#" data-go="reservations">📌 Demande de ${esc(r.name)} — « ${esc(r.productName)} » (${esc(r.from)} → ${esc(r.to)})</a>`).join("")}
+      ${lowStock.map(p => `<a href="#" data-go="shop">📦 Rupture de stock : ${esc(p.name)}</a>`).join("")}
+      ${unread ? `<a href="#" data-go="messages">✉ ${unread} message${unread > 1 ? "s" : ""} non lu${unread > 1 ? "s" : ""}</a>` : ""}
+    </div>
+  </div>` : ""}
+
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Dernières commandes</h3><button class="abtn" data-go="orders">Tout voir →</button></div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Réf.</th><th>Cliente</th><th>Date</th><th>Total</th><th>Statut</th></tr></thead>
+      <tbody>${db.orders.slice(0, 5).map(o => `
+        <tr><td><strong>${esc(o.ref)}</strong></td><td>${esc(o.customer.name)}</td><td>${new Date(o.created).toLocaleDateString("fr-FR")}</td><td>${money(o.total)}</td><td><span class="pill ${o.status === "Annulée" ? "pill-red" : o.status === "Livrée" ? "pill-green" : "pill-gold"}">${esc(o.status)}</span></td></tr>`).join("") || emptyRow(5, "Les commandes passées sur le site apparaîtront ici.")}
+      </tbody></table></div>
+  </div>
+
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Prochaines réservations</h3><button class="abtn" data-go="reservations">Tout voir →</button></div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Caftan</th><th>Dates</th><th>Cliente</th><th>Statut</th></tr></thead>
+      <tbody>${upcoming.map(r => `
+        <tr><td>${esc(r.productName)}</td><td>${esc(r.from)} → ${esc(r.to)}</td><td>${esc(r.name)}<br><small>${esc(r.phone || "")}</small></td><td><span class="pill ${r.status === "Confirmée" ? "pill-green" : "pill-gold"}">${esc(r.status)}</span></td></tr>`).join("") || emptyRow(4, "Aucune réservation à venir.")}
+      </tbody></table></div>
+  </div>`;
+  document.querySelectorAll("#adm-content [data-go]").forEach(b =>
+    b.addEventListener("click", e => { e.preventDefault(); go(b.dataset.go); }));
+}
+
+function rentalsTable(list) {
+  return list.map(p => `
+  <tr>
+    <td><div class="tp-cell">${thumb(p)}<div><strong>${esc(p.name)}</strong><small>Tailles : ${(p.sizes || []).join(", ")}</small></div></div></td>
+    <td>${esc(p.style || "")}</td>
+    <td><span style="display:inline-flex;align-items:center;gap:.45rem"><i style="width:14px;height:14px;border-radius:50%;background:${esc(p.colorHex || "#175247")};display:inline-block"></i>${esc(p.color || "")}</span></td>
+    <td><strong>${money(p.price)}</strong>/j</td>
+    <td><span class="pill ${p.available ? "pill-green" : "pill-red"}">${p.available ? "Disponible" : "Réservé"}</span></td>
+    <td><div class="row-actions">
+      <a class="abtn" href="../location-produit.html?id=${p.id}" target="_blank">Voir ↗</a>
+      <button class="abtn" data-avail-edit="${p.id}">Calendrier</button>
+      <button class="abtn" data-rental-edit="${p.id}">Modifier</button>
+      <button class="abtn abtn-danger" data-del="rentals|${p.id}">Suppr.</button>
+    </div></td>
+  </tr>`).join("");
+}
+
+function viewRentals() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head">
+      <h3>Caftans à louer (${db.rentals.length})</h3>
+      ${searchBox("Nom, couleur, style…")}
+      <button class="btn-new" id="add-rental">+ Nouveau caftan</button>
+    </div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Caftan</th><th>Style</th><th>Couleur</th><th>Prix/jour</th><th>Dispo</th><th></th></tr></thead>
+      <tbody>${rentalsTable(db.rentals) || emptyRow(6, "Ajoutez votre premier caftan à louer.")}</tbody>
+    </table></div>
+  </div>`;
+  $("#add-rental").addEventListener("click", () => rentalForm(null));
+  bindEditButtons();
+}
+
+function rentalForm(p) {
+  const isNew = !p;
+  p = p || {};
+  const fields = `
+    <div class="mf-grid">
+      ${f("name", "Nom du caftan *", p.name, { placeholder: "Ex : Caftan Émeraude Nour", full: true })}
+      ${f("style", "Style", p.style || "Traditionnel", { type: "select", options: STYLES })}
+      ${f("color", "Couleur", p.color || "", { placeholder: "Ex : Émeraude" })}
+      ${f("colorHex", "Nuance", p.colorHex || "#175247", { type: "color" })}
+      ${f("sizes", "Tailles (séparées par des virgules)", (p.sizes || []).join(", "), { placeholder: "36, 38, 40" })}
+      ${f("price", "Prix par jour (DH) *", p.price != null ? p.price : "", { type: "number" })}
+      ${f("icon", "Icône illustrative", p.icon || "caftan", { type: "select", options: Object.keys(ICON_LIST) })}
+      ${f("img", "Photo (URL)", p.img || "", { type: "url", placeholder: "https://… ou images/mon-caftan.jpg", hint: "Laissez vide pour l'illustration élégante automatique." })}
+      ${f("available", "Actuellement disponible à la location", p.available !== false, { type: "checkbox" })}
+      ${f("isNew", "Afficher dans « Nos nouveautés »", !!p.isNew, { type: "checkbox" })}
+      ${f("desc", "Description", p.desc, { type: "textarea", full: true })}
+      ${f("conditions", "Conditions de location (une ligne = une condition)", (p.conditions || []).join("\n"), { type: "textarea", full: true, rows: 4, placeholder: "Location de 1 à 3 jours\nCaution remboursable\nNettoyage inclus" })}
+    </div>`;
+  openModal(isNew ? "Nouveau caftan à louer" : "Modifier — " + p.name, fields, v => {
+    if (!v.name || !v.price) return "Le nom et le prix sont obligatoires.";
+    const obj = {
+      name: v.name, style: v.style, color: v.color, colorHex: v.colorHex,
+      sizes: v.sizes.split(",").map(s => s.trim()).filter(Boolean),
+      price: Number(v.price), icon: v.icon, img: v.img,
+      available: !!v.available, isNew: !!v.isNew, desc: v.desc,
+      conditions: v.conditions.split("\n").map(s => s.trim()).filter(Boolean),
+      availability: p.availability || {}
+    };
+    if (isNew) { obj.id = DB.id("r"); DB.data.rentals.unshift(obj); }
+    else Object.assign(DB.data.rentals.find(x => x.id === p.id), obj);
+  });
+}
+
+function shopForm(p) {
+  const isNew = !p;
+  p = p || {};
+  const fields = `
+    <div class="mf-grid">
+      ${f("name", "Nom du produit *", p.name, { placeholder: "Ex : Caftan Satin Tarz Raffiné", full: true })}
+      ${f("category", "Catégorie", p.category || "Caftans", { type: "select", options: SHOP_CATS })}
+      ${f("price", "Prix de vente (DH) *", p.price != null ? p.price : "", { type: "number" })}
+      ${f("oldPrice", "Prix barré — promo (DH)", p.oldPrice || "", { type: "number", hint: "Laisser vide si pas de promotion." })}
+      ${f("stock", "Stock disponible", p.stock != null ? p.stock : 1, { type: "number" })}
+      ${f("sizes", "Tailles (virgules)", (p.sizes || []).join(", "), { placeholder: "S, M, L ou 38, 40, 42" })}
+      ${f("colors", "Couleurs (virgules)", (p.colors || []).join(", "), { placeholder: "Émeraude, Doré" })}
+      ${f("icon", "Icône illustrative", p.icon || "caftan", { type: "select", options: Object.keys(ICON_LIST) })}
+      ${f("img", "Photo (URL)", p.img || "", { type: "url", hint: "Laissez vide pour l'illustration automatique." })}
+      ${f("isNew", "Afficher dans « Nos nouveautés »", !!p.isNew, { type: "checkbox" })}
+      ${f("desc", "Description", p.desc, { type: "textarea", full: true })}
+    </div>`;
+  openModal(isNew ? "Nouveau produit boutique" : "Modifier — " + p.name, fields, v => {
+    if (!v.name || !v.price) return "Le nom et le prix sont obligatoires.";
+    const obj = {
+      name: v.name, category: v.category, price: Number(v.price),
+      oldPrice: v.oldPrice ? Number(v.oldPrice) : null,
+      stock: Number(v.stock) || 0,
+      sizes: v.sizes.split(",").map(s => s.trim()).filter(Boolean),
+      colors: v.colors.split(",").map(s => s.trim()).filter(Boolean),
+      icon: v.icon, img: v.img, isNew: !!v.isNew, desc: v.desc
+    };
+    if (isNew) { obj.id = DB.id("s"); DB.data.shop.unshift(obj); }
+    else Object.assign(DB.data.shop.find(x => x.id === p.id), obj);
+  });
+}
+
+function accForm(p) {
+  const isNew = !p;
+  p = p || {};
+  const cats = [...new Set(DB.data.accessories.map(a => a.category))];
+  const fields = `
+    <div class="mf-grid">
+      ${f("name", "Nom de l'accessoire *", p.name, { placeholder: "Ex : Plateau doré de cérémonie", full: true })}
+      ${f("category", "Catégorie", p.category || "Plateaux", { type: "select", options: cats.length ? cats : ["Plateaux"] })}
+      ${f("price", "Prix de location (DH/jour) *", p.price != null ? p.price : "", { type: "number" })}
+      ${f("available", "Actuellement disponible", p.available !== false, { type: "checkbox" })}
+      ${f("icon", "Icône illustrative", p.icon || "tray", { type: "select", options: Object.keys(ICON_LIST) })}
+      ${f("img", "Photo (URL)", p.img || "", { type: "url", full: true, hint: "Laissez vide pour l'illustration automatique." })}
+      ${f("desc", "Description", p.desc, { type: "textarea", full: true })}
+    </div>`;
+  openModal(isNew ? "Nouvel accessoire" : "Modifier — " + p.name, fields, v => {
+    if (!v.name || !v.price) return "Le nom et le prix sont obligatoires.";
+    const obj = { name: v.name, category: v.category, price: Number(v.price), available: !!v.available, icon: v.icon, img: v.img, desc: v.desc };
+    if (isNew) { obj.id = DB.id("a"); DB.data.accessories.unshift(obj); }
+    else Object.assign(DB.data.accessories.find(x => x.id === p.id), obj);
+  });
+}
+
+function packForm(pk) {
+  const isNew = !pk;
+  pk = pk || {};
+  const fields = `
+    <div class="mf-grid">
+      ${f("name", "Nom de la formule *", pk.name, { placeholder: "Ex : Premium", full: true })}
+      ${f("price", "Tarif de départ (DH) — 0 = sur devis *", pk.price != null ? pk.price : 0, { type: "number" })}
+      ${f("featured", "Mettre en avant (« le plus choisi »)", !!pk.featured, { type: "checkbox" })}
+      ${f("desc", "Description courte", pk.desc, { type: "textarea", full: true, rows: 2 })}
+      ${f("includes", "Ce qui est inclus (une ligne = un point)", (pk.includes || []).join("\n"), { type: "textarea", full: true, rows: 6 })}
+    </div>`;
+  openModal(isNew ? "Nouvelle formule déco" : "Modifier — " + pk.name, fields, v => {
+    if (!v.name || v.price === "") return "Le nom et le tarif sont obligatoires (0 pour « sur devis »).";
+    const obj = {
+      name: v.name, price: Number(v.price), featured: !!v.featured, desc: v.desc,
+      includes: v.includes.split("\n").map(s => s.trim()).filter(Boolean)
+    };
+    if (isNew) { obj.id = DB.id("p"); DB.data.packs.push(obj); }
+    else Object.assign(DB.data.packs.find(x => x.id === pk.id), obj);
+  });
+}
+
+function viewShop() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head">
+      <h3>Produits à vendre (${db.shop.length})</h3>
+      ${searchBox("Nom, catégorie, taille…")}
+      <button class="btn-new" id="add-shop">+ Nouveau produit</button>
+    </div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Produit</th><th>Catégorie</th><th>Prix</th><th>Promo</th><th>Stock</th><th></th></tr></thead>
+      <tbody>${db.shop.map(p => `
+        <tr>
+          <td><div class="tp-cell">${thumb(p)}<div><strong>${esc(p.name)}</strong><small>Tailles : ${(p.sizes || []).join(", ")}</small></div></div></td>
+          <td>${esc(p.category)}</td>
+          <td><strong>${money(p.price)}</strong></td>
+          <td>${p.oldPrice ? `<span class="pill pill-gold">−${Math.round((1 - p.price / p.oldPrice) * 100)}%</span>` : '<span class="pill pill-gray">—</span>'}</td>
+          <td><span class="pill ${p.stock > 0 ? "pill-green" : "pill-red"}">${p.stock > 0 ? p.stock : "Épuisé"}</span></td>
+          <td><div class="row-actions">
+            <a class="abtn" href="../produit.html?id=${p.id}" target="_blank">Voir ↗</a>
+            <button class="abtn" data-shop-edit="${p.id}">Modifier</button>
+            <button class="abtn abtn-danger" data-del="shop|${p.id}">Suppr.</button>
+          </div></td>
+        </tr>`).join("") || emptyRow(6)}
+      </tbody>
+    </table></div>
+  </div>`;
+  $("#add-shop").addEventListener("click", () => shopForm(null));
+  bindEditButtons();
+}
+
+function viewAcc() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head">
+      <h3>Accessoires de fiançailles (${db.accessories.length})</h3>
+      ${searchBox("Nom, catégorie…")}
+      <button class="btn-new" id="add-acc">+ Nouvel accessoire</button>
+    </div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Accessoire</th><th>Catégorie</th><th>Prix/jour</th><th>Dispo</th><th></th></tr></thead>
+      <tbody>${db.accessories.map(p => `
+        <tr>
+          <td><div class="tp-cell">${thumb(p)}<div><strong>${esc(p.name)}</strong><small>${esc((p.desc || "").slice(0, 46))}…</small></div></div></td>
+          <td>${esc(p.category)}</td>
+          <td><strong>${money(p.price)}</strong></td>
+          <td><span class="pill ${p.available ? "pill-green" : "pill-red"}">${p.available ? "Oui" : "Non"}</span></td>
+          <td><div class="row-actions">
+            <button class="abtn" data-acc-edit="${p.id}">Modifier</button>
+            <button class="abtn abtn-danger" data-del="accessories|${p.id}">Suppr.</button>
+          </div></td>
+        </tr>`).join("") || emptyRow(5)}
+      </tbody>
+    </table></div>
+  </div>`;
+  $("#add-acc").addEventListener("click", () => accForm(null));
+  bindEditButtons();
+}
+
+function partyForm(p) {
+  const isNew = !p;
+  p = p || {};
+  const occs = [...new Set(["Fiançailles", "Anniversaire", "Baby shower", "Henné", "Aïd / Fête", "Shooting photo"].concat(DB.data.parties.map(x => x.occasion)))];
+  const fields = `
+    <div class="mf-grid">
+      ${f("name", "Nom du pack *", p.name, { placeholder: "Ex : Pack Fiançailles Intime", full: true })}
+      ${f("occasion", "Occasion", p.occasion || "Fiançailles", { type: "select", options: occs })}
+      ${f("price", "Tarif de départ (DH) *", p.price != null ? p.price : "", { type: "number" })}
+      ${f("icon", "Icône illustrative", p.icon || "tray", { type: "select", options: Object.keys(ICON_LIST) })}
+      ${f("img", "Photo (URL)", p.img || "", { type: "url", hint: "Laissez vide pour l'illustration automatique." })}
+      ${f("available", "Actuellement proposé sur le site", p.available !== false, { type: "checkbox" })}
+      ${f("popular", "Badge « ★ Populaire »", !!p.popular, { type: "checkbox" })}
+      ${f("desc", "Description courte", p.desc, { type: "textarea", full: true, rows: 2 })}
+      ${f("includes", "Contenu du pack (une ligne = un élément)", (p.includes || []).join("\n"), { type: "textarea", full: true, rows: 6, placeholder: "Coin traditionnel\nPlateau d'alliances\nBougies & lanternes" })}
+    </div>`;
+  openModal(isNew ? "Nouveau pack de fête" : "Modifier — " + p.name, fields, v => {
+    if (!v.name || v.price === "") return "Le nom et le tarif sont obligatoires.";
+    const obj = {
+      name: v.name, occasion: v.occasion, price: Number(v.price),
+      icon: v.icon, img: v.img, available: !!v.available, popular: !!v.popular,
+      desc: v.desc, includes: v.includes.split("\n").map(s => s.trim()).filter(Boolean)
+    };
+    if (isNew) { obj.id = DB.id("pt"); DB.data.parties.unshift(obj); }
+    else Object.assign(DB.data.parties.find(x => x.id === p.id), obj);
+  });
+}
+
+function viewParties() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head">
+      <h3>Packs de fête (${db.parties.length})</h3>
+      ${searchBox("Nom, occasion…")}
+      <button class="btn-new" id="add-party">+ Nouveau pack</button>
+    </div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Pack</th><th>Occasion</th><th>Tarif départ</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${db.parties.map(p => `
+        <tr>
+          <td><div class="tp-cell">${thumb(p)}<div><strong>${esc(p.name)}</strong><small>${(p.includes || []).length} éléments inclus${p.popular ? ' · <span class="pill pill-gold">★ Populaire</span>' : ""}</small></div></div></td>
+          <td>${esc(p.occasion)}</td>
+          <td><strong>${money(p.price)}</strong></td>
+          <td><span class="pill ${p.available ? "pill-green" : "pill-red"}">${p.available ? "En ligne" : "Masqué"}</span></td>
+          <td><div class="row-actions">
+            <a class="abtn" href="../packs.html" target="_blank">Voir ↗</a>
+            <button class="abtn" data-party-edit="${p.id}">Modifier</button>
+            <button class="abtn abtn-danger" data-del="parties|${p.id}">Suppr.</button>
+          </div></td>
+        </tr>`).join("") || emptyRow(5)}
+      </tbody>
+    </table></div>
+  </div>`;
+  $("#add-party").addEventListener("click", () => partyForm(null));
+  bindEditButtons();
+}
+
+function viewPacks() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head">
+      <h3>Formules de décoration (${db.packs.length})</h3>
+      ${searchBox("Nom, description…")}
+      <button class="btn-new" id="add-pack">+ Nouvelle formule</button>
+    </div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Formule</th><th>Tarif départ</th><th>Mise en avant</th><th>Inclus</th><th></th></tr></thead>
+      <tbody>${db.packs.map(pk => `
+        <tr>
+          <td><strong>${esc(pk.name)}</strong><br><small>${esc(pk.desc)}</small></td>
+          <td><strong>${pk.price > 0 ? money(pk.price) : "Sur devis"}</strong></td>
+          <td>${pk.featured ? '<span class="pill pill-gold">★ Mise en avant</span>' : '<span class="pill pill-gray">—</span>'}</td>
+          <td><small>${pk.includes.map(esc).join("<br>")}</small></td>
+          <td><div class="row-actions">
+            <button class="abtn" data-pack-edit="${pk.id}">Modifier</button>
+            <button class="abtn abtn-danger" data-del="packs|${pk.id}">Suppr.</button>
+          </div></td>
+        </tr>`).join("") || emptyRow(5)}
+      </tbody>
+    </table></div>
+  </div>`;
+  $("#add-pack").addEventListener("click", () => packForm(null));
+  bindEditButtons();
+}
+
+function viewOrders() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Commandes boutique (${db.orders.length})</h3>${searchBox("Réf., cliente, ville…")}</div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Réf.</th><th>Cliente</th><th>Articles</th><th>Livraison</th><th>Total</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${db.orders.map(o => `
+        <tr>
+          <td><strong>${esc(o.ref)}</strong><br><small>${new Date(o.created).toLocaleDateString("fr-FR")} ${new Date(o.created).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small></td>
+          <td>${esc(o.customer.name)}<br><small>${esc(o.customer.phone)} · ${esc(o.customer.city)}</small></td>
+          <td><small>${o.items.map(i => esc(i.name) + " ×" + i.qty).join("<br>")}</small></td>
+          <td><small>${esc(o.delivery)}<br>${esc(o.payment)}</small></td>
+          <td><strong>${money(o.total)}</strong></td>
+          <td><select class="adm-select" data-order-status="${o.id}">${ORDER_STATUS.map(s => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+          <td><div class="row-actions">
+            <button class="abtn abtn-primary" data-order-detail="${o.id}">Détails</button>
+            <a class="abtn" target="_blank" rel="noopener" href="${waLink(`Bonjour ${o.customer.name}, au sujet de votre commande ${o.ref} chez ${SITE.name}…`)}">WhatsApp</a>
+            <button class="abtn abtn-danger" data-del="orders|${o.id}">Suppr.</button>
+          </div></td>
+        </tr>`).join("") || emptyRow(7, "Les commandes du site arriveront ici en temps réel.")}
+      </tbody>
+    </table></div>
+  </div>`;
+  bindEditButtons();
+}
+
+function dateRange(from, to) {
+  const out = [];
+  const d = new Date(from + "T12:00:00");
+  const end = new Date(to + "T12:00:00");
+  while (d <= end) { out.push(d.toISOString().slice(0, 10)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+
+function viewReservations() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Demandes de réservation (${db.reservations.length})</h3>${searchBox("Cliente, caftan…")}</div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Caftan</th><th>Période</th><th>Cliente</th><th>Statut</th><th></th></tr></thead>
+      <tbody>${db.reservations.map(r => `
+        <tr>
+          <td><strong>${esc(r.productName)}</strong></td>
+          <td>${esc(r.from)}<br>→ ${esc(r.to)}</td>
+          <td>${esc(r.name)}<br><small>${esc(r.phone || "—")}</small></td>
+          <td><select class="adm-select" data-res-status="${r.id}">${RES_STATUS.map(s => `<option ${s === r.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+          <td><div class="row-actions">
+            <button class="abtn abtn-primary" data-block-dates="${r.id}" title="Marquer ces dates comme réservées dans le calendrier public">Bloquer les dates</button>
+            <a class="abtn" target="_blank" rel="noopener" href="${waLink(`Bonjour ${r.name}, concernant votre demande de réservation pour « ${r.productName} » du ${r.from} au ${r.to}…`)}">WhatsApp</a>
+            <button class="abtn abtn-danger" data-del="reservations|${r.id}">Suppr.</button>
+          </div></td>
+        </tr>`).join("") || emptyRow(5, "Les demandes envoyées depuis les fiches caftans arriveront ici.")}
+      </tbody>
+    </table></div>
+  </div>`;
+  bindEditButtons();
+}
+
+let calY = new Date().getFullYear();
+let calM = new Date().getMonth();
+
+function viewAvail() {
+  const db = DB.data;
+  const selId = sessionStorage.getItem("errouani_avail_sel") || (db.rentals[0] && db.rentals[0].id);
+  const sel = db.rentals.find(r => r.id === selId) || db.rentals[0];
+  sessionStorage.setItem("errouani_avail_sel", sel ? sel.id : "");
+  const y = calY, m = calM;
+  const names = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  const first = new Date(y, m, 1);
+  const startDow = (first.getDay() + 6) % 7;
+  const days = new Date(y, m + 1, 0).getDate();
+  let cells = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(d => `<div class="ed-dow">${d}</div>`).join("");
+  for (let i = 0; i < startDow; i++) cells += "<div></div>";
+  const todayStr = new Date().toISOString().slice(0, 10);
+  for (let d = 1; d <= days; d++) {
+    const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    let st = sel && sel.availability ? (sel.availability[ds] || "avail") : "avail";
+    if (!sel && ds >= todayStr) st = "avail";
+    cells += `<button class="ed-day st-${st}" data-day="${ds}" title="${ds} — cliquez pour changer">${d}</button>`;
+  }
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel cal-editor">
+    <div class="ap-head">
+      <h3>Calendrier de disponibilité</h3>
+      <select class="adm-select" id="avail-select" style="max-width:280px">
+        ${db.rentals.map(r => `<option value="${r.id}" ${sel && sel.id === r.id ? "selected" : ""}>${esc(r.name)}</option>`).join("")}
+      </select>
+    </div>
+    <div style="padding:1.4rem">
+      ${sel ? "" : '<div class="empty-admin"><strong>Aucun caftan</strong>Ajoutez d\'abord un caftan dans « Caftans à louer ».</div>'}
+      <div class="cal-mhead">
+        <strong>${names[m]} ${y}</strong>
+        <div class="cal-nav">
+          <button id="cal-prev" aria-label="Mois précédent">←</button>
+          <button id="cal-next" aria-label="Mois suivant">→</button>
+        </div>
+      </div>
+      <div class="ed-cal">${cells}</div>
+      <div class="ed-legend">
+        <span><i style="background:#fff;border:1.5px solid #1EA85A"></i>Disponible</span>
+        <span><i style="background:rgba(150,48,47,.16);border:1px solid #96302F"></i>Réservé</span>
+        <span><i style="background:#EDE7DA;border:1px solid #B7AD99"></i>Bloqué</span>
+        <span style="color:#A98340">Cliquez sur un jour pour changer son statut ✓</span>
+      </div>
+    </div>
+  </div>`;
+  const selEl = document.getElementById("avail-select");
+  if (selEl) selEl.addEventListener("change", e => { sessionStorage.setItem("errouani_avail_sel", e.target.value); viewAvail(); });
+  const prev = document.getElementById("cal-prev");
+  if (prev) prev.addEventListener("click", () => { calM--; if (calM < 0) { calM = 11; calY--; } viewAvail(); });
+  const next = document.getElementById("cal-next");
+  if (next) next.addEventListener("click", () => { calM++; if (calM > 11) { calM = 0; calY++; } viewAvail(); });
+  document.querySelectorAll("[data-day]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!sel) return;
+      const ds = btn.dataset.day;
+      const cur = (sel.availability[ds] || "avail");
+      const nxt = cur === "avail" ? "reserved" : cur === "reserved" ? "blocked" : "avail";
+      if (nxt === "avail") delete sel.availability[ds];
+      else sel.availability[ds] = nxt;
+      DB.save();
+      viewAvail();
+      toast(ds + " → " + (nxt === "reserved" ? "réservé" : nxt === "blocked" ? "bloqué" : "disponible"));
+    });
+  });
+}
+
+function viewMessages() {
+  const db = DB.data;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Boîte de réception (${db.messages.length})</h3>${searchBox("Nom, message…")}</div>
+    ${db.messages.map(m => `
+      <div class="msg-item ${m.read ? "" : "unread"}">
+        <div class="msg-meta">
+          <strong>${esc(m.name)}</strong>
+          ${m.phone ? `<span>📞 ${esc(m.phone)}</span>` : ""}
+          ${m.email ? `<span>✉ ${esc(m.email)}</span>` : ""}
+          <span>· ${new Date(m.date).toLocaleString("fr-FR")}</span>
+          ${!m.read ? '<span class="pill pill-gold">Non lu</span>' : ""}
+        </div>
+        <div class="msg-sub">${esc(m.subject || "Message")}</div>
+        <div class="msg-body">${esc(m.body)}</div>
+        <div class="msg-actions">
+          ${m.phone ? `<a class="abtn abtn-primary" target="_blank" rel="noopener" href="${waLink(`Bonjour ${m.name}, vous avez contacté ${SITE.name}. Nous revenons vers vous concernant : ${m.subject || "votre message"}.`)}">Répondre WhatsApp</a>` : ""}
+          ${m.email ? `<a class="abtn" href="mailto:${esc(m.email)}?subject=Re: ${encodeURIComponent(m.subject || "Votre message")}">Répondre par email</a>` : ""}
+          <button class="abtn" data-msg-read="${m.id}">${m.read ? "Marquer non lu" : "Marquer lu"}</button>
+          <button class="abtn abtn-danger" data-del="messages|${m.id}">Supprimer</button>
+        </div>
+      </div>`).join("") || `<div class="empty-admin"><strong>Aucun message</strong>Les formulaires de contact et demandes de devis arriveront ici.</div>`}
+  </div>`;
+  bindEditButtons();
+}
+
+function viewSettings() {
+  const s = SITE;
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Coordonnées publiées sur le site</h3></div>
+    <div style="padding:1.5rem">
+      <div class="mf-grid">
+        ${f("whatsapp", "Numéro WhatsApp (format international sans + ni espaces) *", s.whatsapp, { placeholder: "212661234567", full: true, hint: "Tous les boutons WhatsApp du site utiliseront ce numéro." })}
+        ${f("phoneDisplay", "Téléphone affiché", s.phoneDisplay)}
+        ${f("email", "Email affiché", s.email)}
+        ${f("instagramHandle", "Pseudo Instagram", s.instagramHandle)}
+        ${f("instagram", "Lien Instagram (URL)", s.instagram)}
+        ${f("address", "Adresse", s.address, { full: true })}
+        ${f("hours", "Horaires", s.hours, { full: true })}
+      </div>
+      <button class="btn-new" id="save-site" style="margin-top:1.2rem">Enregistrer les coordonnées ✓</button>
+    </div>
+  </div>
+
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Sécurité &amp; données</h3></div>
+    <div style="padding:1.5rem;display:flex;flex-direction:column;gap:1.2rem;max-width:520px">
+      <div class="mf-field"><label>Code PIN d'administration</label>
+        <input type="text" data-f="adminPin" value="${esc(DB.data.settings.adminPin)}">
+        <span class="mf-hint">Notez-le précieusement — il protège cette page.</span>
+      </div>
+      <button class="btn-new" id="save-pin">Changer le PIN</button>
+      <hr style="border:none;border-top:1px solid #E5DBC7">
+      <div style="display:flex;gap:.7rem;flex-wrap:wrap">
+        <button class="abtn" id="export-db">⬇ Exporter les données (JSON)</button>
+        <label class="abtn" style="cursor:pointer">⬆ Importer un JSON<input type="file" id="import-db" accept=".json" hidden></label>
+        <button class="abtn abtn-danger" id="reset-db">Réinitialiser données démo</button>
+      </div>
+      <p class="mf-hint">Vos données sont stockées dans ce navigateur (localStorage). Faites des exports réguliers — et pour un usage multi-appareils, une synchronisation serveur pourra être ajoutée plus tard.</p>
+    </div>
+  </div>`;
+
+  $("#save-site").addEventListener("click", () => {
+    const get = n => document.querySelector(`[data-f="${n}"]`).value.trim();
+    if (!get("whatsapp")) { toast("Le numéro WhatsApp est requis."); return; }
+    DB.data.settings.site = {
+      whatsapp: get("whatsapp"), phoneDisplay: get("phoneDisplay"), email: get("email"),
+      instagram: get("instagram"), instagramHandle: get("instagramHandle"),
+      address: get("address"), hours: get("hours")
+    };
+    Object.assign(SITE, DB.data.settings.site);
+    DB.save();
+    toast("Coordonnées mises à jour — visibles immédiatement sur le site ✓");
+  });
+
+  $("#save-pin").addEventListener("click", () => {
+    const pin = document.querySelector('[data-f="adminPin"]').value.trim();
+    if (pin.length < 3) { toast("PIN trop court (3 chiffres minimum)."); return; }
+    DB.data.settings.adminPin = pin;
+    DB.save();
+    toast("Code PIN mis à jour ✓");
+  });
+
+  $("#export-db").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(DB.data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "errouani-sauvegarde-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click();
+  });
+
+  document.getElementById("import-db").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed.rentals || !parsed.shop) throw new Error("bad");
+        DB.data = parsed;
+        DB.save();
+        go("dash");
+        toast("Données importées ✓");
+      } catch (err) { toast("Fichier invalide."); }
+    };
+    reader.readAsText(file);
+  });
+
+  $("#reset-db").addEventListener("click", () => {
+    if (confirm("Réinitialiser toutes les données (produits, commandes…) avec le contenu de démonstration ?")) {
+      DB.reset();
+      go("dash");
+      toast("Données réinitialisées.");
+    }
+  });
+}
+
+function bindEditButtons() {
+  bindTableSearch();
+
+  document.querySelectorAll("[data-order-detail]").forEach(b =>
+    b.addEventListener("click", () => orderDetail(DB.data.orders.find(x => x.id === b.dataset.orderDetail))));
+
+  document.querySelectorAll("[data-rental-edit]").forEach(b =>
+    b.addEventListener("click", () => rentalForm(DB.data.rentals.find(x => x.id === b.dataset.rentalEdit))));
+  document.querySelectorAll("[data-shop-edit]").forEach(b =>
+    b.addEventListener("click", () => shopForm(DB.data.shop.find(x => x.id === b.dataset.shopEdit))));
+  document.querySelectorAll("[data-acc-edit]").forEach(b =>
+    b.addEventListener("click", () => accForm(DB.data.accessories.find(x => x.id === b.dataset.accEdit))));
+  document.querySelectorAll("[data-party-edit]").forEach(b =>
+    b.addEventListener("click", () => partyForm(DB.data.parties.find(x => x.id === b.dataset.partyEdit))));
+  document.querySelectorAll("[data-pack-edit]").forEach(b =>
+    b.addEventListener("click", () => packForm(DB.data.packs.find(x => x.id === b.dataset.packEdit))));
+
+  document.querySelectorAll("[data-avail-edit]").forEach(b =>
+    b.addEventListener("click", () => { sessionStorage.setItem("errouani_avail_sel", b.dataset.availEdit); go("avail"); }));
+
+  document.querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => {
+      const parts = b.dataset.del.split("|");
+      const label = { rentals: "ce caftan", shop: "ce produit", accessories: "cet accessoire", parties: "ce pack fête", packs: "cette formule", orders: "cette commande", reservations: "cette réservation", messages: "ce message" }[parts[0]];
+      if (!confirm("Supprimer définitivement " + label + " ?")) return;
+      DB.data[parts[0]] = DB.data[parts[0]].filter(x => x.id !== parts[1]);
+      DB.save();
+      go(state.section);
+      toast("Supprimé.");
+    }));
+
+  document.querySelectorAll("[data-order-status]").forEach(sel =>
+    sel.addEventListener("change", () => {
+      const o = DB.data.orders.find(x => x.id === sel.dataset.orderStatus);
+      o.status = sel.value;
+      DB.save();
+      renderNav(computeBadges());
+      toast("Commande mise à jour ✓");
+    }));
+
+  document.querySelectorAll("[data-res-status]").forEach(sel =>
+    sel.addEventListener("change", () => {
+      const r = DB.data.reservations.find(x => x.id === sel.dataset.resStatus);
+      r.status = sel.value;
+      DB.save();
+      renderNav(computeBadges());
+      toast("Réservation mise à jour ✓");
+    }));
+
+  document.querySelectorAll("[data-block-dates]").forEach(b =>
+    b.addEventListener("click", () => {
+      const r = DB.data.reservations.find(x => x.id === b.dataset.blockDates);
+      const product = DB.data.rentals.find(p => p.id === r.productId);
+      if (!product) { toast("Caftan introuvable — peut-être supprimé."); return; }
+      if (!product.availability) product.availability = {};
+      dateRange(r.from, r.to).forEach(d => { product.availability[d] = "reserved"; });
+      r.status = "Confirmée";
+      DB.save();
+      go("reservations");
+      toast("Dates bloquées dans le calendrier public ✓");
+    }));
+
+  document.querySelectorAll("[data-msg-read]").forEach(b =>
+    b.addEventListener("click", () => {
+      const m = DB.data.messages.find(x => x.id === b.dataset.msgRead);
+      m.read = !m.read;
+      DB.save();
+      go("messages");
+    }));
+}
+
+function initLogin() {
+  let activeCode = null;
+  let tickOn = false;
+
+  const sendBtn = $("#send-code-btn");
+  const timerEl = $("#code-timer");
+  const infoEl = $("#login-info");
+  const errEl = $("#login-error");
+  const demoBox = $("#demo-code-box");
+  const demoVal = $("#demo-code-val");
+  const input = $("#login-code");
+  const mailHint = $("#adm-mail-hint");
+  if (mailHint && typeof ADMIN_EMAIL !== "undefined") mailHint.textContent = ADMIN_EMAIL;
+  window.__admCode = () => activeCode;
+
+  function tick() {
+    if (!tickOn || !activeCode) return;
+    const left = activeCode.exp - Date.now();
+    timerEl.textContent = left > 0 ? "⏱ Code actif — expire dans " + Math.ceil(left / 1000) + " s" : "";
+    if (left > 0 && !activeCode.used) setTimeout(tick, 250);
+    else tickOn = false;
+  }
+
+  async function sendCode() {
+    errEl.textContent = ""; infoEl.textContent = "";
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    activeCode = { code, exp: Date.now() + 30000, used: false };
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Envoi…";
+    demoBox.style.display = "none";
+    tickOn = true;
+    tick();
+
+    const cfg = typeof EMAILJS !== "undefined" ? EMAILJS : null;
+    const toMail = typeof ADMIN_EMAIL !== "undefined" ? ADMIN_EMAIL : "";
+    let sentReal = false;
+    if (cfg && cfg.serviceId && cfg.templateId && cfg.publicKey && toMail) {
+      try {
+        const r = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            service_id: cfg.serviceId,
+            template_id: cfg.templateId,
+            user_id: cfg.publicKey,
+            template_params: { to_email: toMail, passcode: code, validity: "30 secondes", brand: SITE.name }
+          })
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        sentReal = true;
+        infoEl.textContent = "✅ Code envoyé à " + toMail + " — vérifiez votre boîte (et les spams).";
+      } catch (e) {
+        infoEl.textContent = "⚠️ Envoi email impossible — code de secours affiché ci-dessous.";
+      }
+    }
+    if (!sentReal) {
+      demoVal.textContent = code;
+      demoBox.style.display = "block";
+      if (!(cfg && cfg.serviceId && cfg.templateId && cfg.publicKey)) {
+        infoEl.innerHTML = 'Mode démo : ajoutez vos clés EmailJS dans <strong>js/config.js</strong> pour recevoir le code par email.';
+      }
+    }
+
+    setTimeout(() => {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "↻ Renvoyer le code";
+    }, 800);
+  }
+
+  function tryLogin() {
+    errEl.textContent = "";
+    if (!activeCode) { errEl.textContent = "Demandez d'abord un code."; return; }
+    if (activeCode.used) { errEl.textContent = "Code déjà utilisé — demandez-en un nouveau."; return; }
+    if (Date.now() >= activeCode.exp) {
+      errEl.textContent = "⏱ Code expiré — cliquez sur « Renvoyer le code ».";
+      return;
+    }
+    if (input.value.replace(/\D/g, "") === activeCode.code) {
+      activeCode.used = true;
+      sessionStorage.setItem(SESSION_KEY, "1");
+      startApp();
+    } else {
+      errEl.textContent = "Code incorrect — réessayez.";
+      input.value = "";
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener("click", sendCode);
+  $("#login-btn").addEventListener("click", tryLogin);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
+  input.addEventListener("input", () => { input.value = input.value.replace(/\D/g, "").slice(0, 6); });
+}
+
+function startApp() {
+  $("#adm-login").style.display = "none";
+  $("#adm-app").style.display = "block";
+  installImgFallback();
+  $("#year-now").textContent = new Date().getFullYear();
+  renderNav(computeBadges());
+  go("dash");
+
+  $("#as-nav").addEventListener("click", e => {
+    const a = e.target.closest("a[data-sec]");
+    if (!a) return;
+    e.preventDefault();
+    go(a.dataset.sec);
+  });
+  $("#logout-btn").addEventListener("click", () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+  });
+  $("#burger-adm").addEventListener("click", () => $("#adm-side").classList.toggle("open"));
+  document.querySelectorAll("[data-modal-close]").forEach(b => b.addEventListener("click", closeModal));
+  $("#adm-modal").addEventListener("click", e => { if (e.target.id === "adm-modal") closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+}
+
+DB.load();
+if (sessionStorage.getItem(SESSION_KEY) === "1") startApp();
+else initLogin();

@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration — Caftan Errouani</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../images/logo.png">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="adm-body">
+
+<div id="adm-login" class="adm-login">
+  <div class="al-card">
+    <img class="logo-img" src="../images/logo.png" alt="Errouani" style="height:56px;width:auto;max-width:180px;object-fit:contain">
+    <h1>Espace Administration</h1>
+    <p>Maison Errouani — connexion sécurisée par code</p>
+    <button class="btn btn-gold btn-block" id="send-code-btn">📧 Recevoir le code par email</button>
+    <div class="al-timer" id="code-timer"></div>
+    <div class="al-ok" id="login-info"></div>
+    <div class="al-demo" id="demo-code-box" style="display:none">Mode démo — votre code : <strong id="demo-code-val"></strong></div>
+    <input type="tel" id="login-code" inputmode="numeric" autocomplete="one-time-code" placeholder="Code à 6 chiffres">
+    <div class="al-error" id="login-error"></div>
+    <button class="btn btn-primary btn-block btn-lg" id="login-btn">Se connecter</button>
+    <p style="margin-top:1.2rem;font-size:.78rem">Code valable <strong>30 secondes</strong>, usage unique.<br>Envoyé à <strong id="adm-mail-hint"></strong></p>
+    <a href="../index.html" style="font-size:.85rem;color:#A98340;display:inline-block;margin-top:.4rem">← Retour au site</a>
+  </div>
+</div>
+
+<div id="adm-app" style="display:none">
+  <div class="adm-shell">
+    <aside class="adm-side" id="adm-side">
+      <div class="as-brand">
+        <img class="logo-img" style="width:40px;height:40px;object-fit:contain" src="../images/logo.png" alt="Errouani">
+        <div><strong>Errouani</strong><span>Administration</span></div>
+      </div>
+      <nav class="as-nav" id="as-nav"></nav>
+      <div class="as-foot">© <span id="year-now"></span> Maison Errouani</div>
+    </aside>
+
+    <main class="adm-main">
+      <div class="adm-topbar">
+        <div style="display:flex;align-items:center;gap:.9rem">
+          <button class="icon-btn burger-adm" id="burger-adm" aria-label="Menu admin" style="border:1px solid #E5DBC7">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
+          </button>
+          <h2 id="adm-title">Tableau de bord</h2>
+        </div>
+        <div class="at-actions">
+          <a class="abtn" href="../index.html" target="_blank">Voir le site ↗</a>
+          <button class="abtn abtn-danger" id="logout-btn">Déconnexion</button>
+        </div>
+      </div>
+      <div class="adm-content" id="adm-content"></div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-bg" id="adm-modal">
+  <div class="modal-card">
+    <div class="mc-head">
+      <h3 id="modal-title">Modifier</h3>
+      <button class="abtn" data-modal-close>✕</button>
+    </div>
+    <div class="mc-body" id="modal-body"></div>
+    <div class="mc-foot">
+      <button class="abtn" data-modal-close>Annuler</button>
+      <button class="btn-new" id="modal-save">Enregistrer ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="adm-toast" id="adm-toast"></div>
+
+<script src="../js/config.js"></script>
+<script src="../js/seed.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/admin.js"></script>
+</body>
+</html>

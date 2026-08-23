@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boutique — Caftans, Takchitas &amp; Djellabas à vendre | Caftan Errouani</title>
+  <meta name="description" content="Achetez votre caftan marocain en ligne : caftans modernes, takchitas de soirée, djellabas brodées. Livraison partout au Maroc, paiement à la livraison.">
+  <meta name="keywords" content="acheter caftan marocain, caftan moderne vente, takchita achat, djellaba brodée, boutique caftan Marrakech">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/boutique.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="shop">
+<div id="site-header"></div>
+
+<main>
+  <section class="page-hero pattern-bg">
+    <div class="container">
+      <span class="eyebrow">À emporter chez vous</span>
+      <h1>La boutique</h1>
+      <p class="lead">Nos pièces coup de cœur à acheter — tissus nobles, finitions soignées, livraison partout au Maroc.</p>
+    </div>
+  </section>
+
+  <section class="section-tight container">
+    <div class="filters-bar reveal in">
+      <div class="filter-group" style="flex:2 1 280px">Catégorie
+        <div id="shop-cats" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.35rem"></div>
+      </div>
+      <label class="filter-group" style="max-width:220px">Trier par
+        <select id="shop-sort">
+          <option value="">Pertinence</option>
+          <option value="price-asc">Prix croissant</option>
+          <option value="price-desc">Prix décroissant</option>
+          <option value="promo">Promotions d'abord</option>
+        </select>
+      </label>
+    </div>
+
+    <p class="results-count" id="shop-count"></p>
+    <div class="grid-products" id="shop-grid"></div>
+  </section>
+
+  <section class="section container">
+    <div class="cta-band reveal">
+      <h2>Besoin d'un conseil taille ou tissu ?</h2>
+      <p>Une hésitation ? Écrivez-nous, nous vous guidons avec plaisir.</p>
+      <a class="btn btn-wa btn-lg js-shop-wa" target="_blank" rel="noopener" href="#">Nous écrire</a>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>
+  bindGlobalUI();
+  initBoutique();
+  document.querySelectorAll(".js-shop-wa").forEach(a => a.href = waLink("Bonjour " + SITE.name + ", j'aimerais acheter un caftan."));
+</script>
+</body>
+</html>

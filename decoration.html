@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Décoration d'Événements &amp; Fiançailles à Marrakech | Caftan Errouani</title>
+  <meta name="description" content="Décoration de fiançailles et petits événements à Marrakech : coin traditionnel marocain, table d'honneur, photobooth. Formules dès 900 DH, devis gratuit.">
+  <meta name="keywords" content="décoration fiançailles Marrakech, coin traditionnel marocain, décoration khotba, photobooth mariage">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/decoration.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="deco">
+<div id="site-header"></div>
+
+<main>
+  <section class="page-hero pattern-bg">
+    <div class="container">
+      <span class="eyebrow">L'art de recevoir à la marocaine</span>
+      <h1>Décoration d'événements</h1>
+      <p class="lead">Coins traditionnels, tables d'honneur, photobooths fleuris — nous mettons en scène vos plus belles heures.</p>
+    </div>
+  </section>
+
+  <section class="section-tight container">
+    <div class="section-head center reveal">
+      <span class="eyebrow">Nos formules</span>
+      <h2>Choisissez votre ambiance</h2>
+    </div>
+    <div class="packs-grid" id="packs-grid"></div>
+  </section>
+
+  <section class="section container">
+    <div class="reserve-box reveal in" style="max-width:720px;margin-inline:auto">
+      <h2 style="margin-bottom:.4rem">Devis sur mesure en 2 minutes</h2>
+      <p class="p-meta" style="margin-bottom:1.2rem">Décrivez votre événement — date, lieu, nombre d'invités — et recevez une proposition chiffrée.</p>
+      <form id="quote-form">
+        <div class="form-row">
+          <div class="form-field"><label for="qt-name">Votre nom</label><input type="text" id="qt-name" placeholder="Nom et prénom"></div>
+          <div class="form-field"><label for="qt-phone">Téléphone / WhatsApp</label><input type="tel" id="qt-phone" placeholder="06 XX XX XX XX"></div>
+        </div>
+        <div class="form-field"><label for="qt-details">Votre événement</label><textarea id="qt-details" rows="3" placeholder="Fiançailles le 15 octobre à Guéliz, 30 invités, j'aime le vert et l'or…"></textarea></div>
+        <button type="submit" class="btn btn-primary btn-lg">Recevoir mon devis gratuit</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section-tight container">
+    <div class="gallery-masonry reveal in">
+      <img src="images/deco1.jpg" data-icon="lantern" data-label="Coin traditionnel" alt="Coin traditionnel marocain décoré" loading="lazy">
+      <img src="images/deco2.jpg" data-icon="vase" data-label="Table d'honneur" alt="Table d'honneur fiançailles fleurie" loading="lazy">
+      <img src="images/deco3.jpg" data-icon="candle" data-label="Ambiance bougies" alt="Bougies et lanternes pour cérémonie" loading="lazy">
+    </div>
+  </section>
+
+  <section class="section container">
+    <div class="cta-band reveal">
+      <h2>Un événement qui vous ressemble</h2>
+      <p>Chaque décor est composé à la main, avec des pièces authentiques de notre collection.</p>
+      <a class="btn btn-wa btn-lg js-deco-wa" target="_blank" rel="noopener" href="#">Parler à notre décoratrice</a>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>
+  bindGlobalUI();
+  initDecoration();
+  document.querySelectorAll(".js-deco-wa").forEach(a => a.href = waLink("Bonjour " + SITE.name + ", je souhaite un devis décoration."));
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commander | Caftan Errouani</title>
+  <meta name="description" content="Finalisez votre commande — paiement à la livraison ou virement, livraison partout au Maroc.">
+  <link rel="canonical" href="https://www.caftan-errouani.ma/checkout.html">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="checkout">
+<div id="site-header"></div>
+
+<main class="section-tight container" style="padding-top:2.5rem" id="checkout-wrap">
+  <div class="section-head">
+    <span class="eyebrow">Dernière étape</span>
+    <h1 style="font-size:clamp(1.9rem,3.4vw,2.9rem)">Finaliser ma commande</h1>
+  </div>
+
+  <form id="checkout-form" class="checkout-layout">
+    <div class="reserve-box reveal in">
+      <h3>Vos coordonnées</h3>
+      <div class="form-row">
+        <div class="form-field"><label for="ck-name">Nom complet *</label><input type="text" id="ck-name" required placeholder="Nom et prénom"></div>
+        <div class="form-field"><label for="ck-phone">Téléphone / WhatsApp *</label><input type="tel" id="ck-phone" required placeholder="06 XX XX XX XX"></div>
+      </div>
+      <div class="form-field"><label for="ck-city">Ville *</label><input type="text" id="ck-city" required placeholder="Marrakech…"></div>
+      <div class="form-field"><label for="ck-address">Adresse de livraison</label><input type="text" id="ck-address" placeholder="Quartier, rue, n°…"></div>
+      <div class="form-field"><label for="ck-note">Note (facultatif)</label><textarea id="ck-note" rows="2" placeholder="Précisions sur la livraison, la taille…"></textarea></div>
+
+      <h3 style="margin-top:1.4rem">Livraison</h3>
+      <div class="radio-cards">
+        <label class="radio-card checked"><input type="radio" name="delivery" value="domicile" checked><span><strong>Livraison domicile — 50 DH</strong><br><small>Partout au Maroc, 24-72h</small></span></label>
+        <label class="radio-card"><input type="radio" name="delivery" value="relais"><span><strong>Point relais — 30 DH</strong><br><small>Retrait dans un point partenaire</small></span></label>
+        <label class="radio-card"><input type="radio" name="delivery" value="retrait"><span><strong>Retrait boutique — Gratuit</strong><br><small>Guéliz, sur rendez-vous</small></span></label>
+      </div>
+
+      <h3 style="margin-top:1.4rem">Paiement</h3>
+      <div class="radio-cards">
+        <label class="radio-card checked"><input type="radio" name="payment" value="Paiement à la livraison" checked><span><strong>À la livraison</strong><br><small>Espèces à réception</small></span></label>
+        <label class="radio-card"><input type="radio" name="payment" value="Virement bancaire"><span><strong>Virement bancaire</strong><br><small>Coordonnées envoyées par WhatsApp</small></span></label>
+      </div>
+    </div>
+
+    <aside class="summary-box reveal in d1">
+      <h3>Votre commande</h3>
+      <ul id="co-items" style="padding:0;list-style:none"></ul>
+      <div class="sum-line" style="margin-top:.8rem"><span>Sous-total</span><strong id="co-subtotal">0 DH</strong></div>
+      <div class="sum-line"><span>Livraison</span><strong id="co-fee">—</strong></div>
+      <div class="sum-total"><span>Total</span><span class="price" id="co-total">0 DH</span></div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:1.2rem">Confirmer la commande ✓</button>
+      <p class="p-meta" style="margin-top:.7rem;text-align:center">Aucun paiement en ligne — nous vous appelons pour confirmer.</p>
+    </aside>
+  </form>
+</main>
+
+<div id="site-footer"></div>
+<div id="mobile-menu"></div>
+<script src="js/config.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script>bindGlobalUI(); initCheckout(); observeReveals();</script>
+</body>
+</html>

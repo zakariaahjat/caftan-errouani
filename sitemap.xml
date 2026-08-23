@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.caftan-errouani.ma/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/location.html</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/boutique.html</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/accessoires.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/packs.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/decoration.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/apropos.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/contact.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/panier.html</loc><priority>0.3</priority></url>
+  <url><loc>https://www.caftan-errouani.ma/checkout.html</loc><priority>0.3</priority></url>
+</urlset>
