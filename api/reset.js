@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
-      const seed = require("../backend/data/seed.json");
+      const seed = require("./seed.json");
       const kv = getKV();
       if (kv) await kv.set(DB_KEY, seed);
       return res.status(200).json({ ok: true });

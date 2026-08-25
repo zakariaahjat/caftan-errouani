@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
         data = _fallback;
       }
       if (!data) {
-        data = require("../backend/data/seed.json");
+        data = require("./seed.json");
         if (kv) await kv.set(DB_KEY, data);
         _fallback = data;
       }
