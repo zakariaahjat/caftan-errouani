@@ -252,7 +252,7 @@ function renderFooter() {
             <a href="#" aria-label="Facebook">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.7c0-.9.3-1.6 1.6-1.6h1.7V4.2C16.5 4.1 15.4 4 14.2 4c-2.6 0-4.3 1.6-4.3 4.4v2.4H7.2V14h2.7v8h3.6z"/></svg>
             </a>
-            <a href="#" aria-label="TikTok">
+            <a href="${esc(SITE.tiktok || '#')}" target="_blank" rel="noopener" aria-label="TikTok">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 3c.4 2.1 1.8 3.6 3.9 3.9v3c-1.5 0-2.8-.5-3.9-1.3v5.9a5.9 5.9 0 1 1-5.9-5.9c.3 0 .7 0 1 .1v3.1a2.8 2.8 0 1 0 1.9 2.7V3h3z"/></svg>
             </a>
           </div>
@@ -343,7 +343,7 @@ function openCart() {
   } else {
     items.innerHTML = rows.map(r => `
       <div class="dc-item">
-        <img src="${productImg(r)}"${imgAttrs(r)} alt="">
+        <img src="${productImg(r)}"${imgAttrs(r)} alt="" loading="lazy">
         <div class="dc-info">
           <div class="p-name">${esc(r.name)}</div>
           <div class="p-meta">Taille ${esc(r.cartSize)}</div>
@@ -470,4 +470,145 @@ function bindGlobalUI() {
     const fab = e.target.closest("#fab-wa");
     if (fab && !fab.href.includes("wa.me")) { e.preventDefault(); location.href = waLink("Bonjour !"); }
   }, false);
+
+  /* back-to-top */
+  var btt = document.createElement('button');
+  btt.className = 'backtotop';
+  btt.setAttribute('aria-label', 'Retour en haut');
+  btt.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>';
+  btt.style.cssText = 'position:fixed;bottom:90px;right:22px;z-index:149;width:44px;height:44px;border-radius:50%;background:var(--g800);color:var(--gold-soft);border:none;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.18);transition:opacity .3s,transform .3s;opacity:0;transform:translateY(10px)';
+  document.body.appendChild(btt);
+  window.addEventListener('scroll', function(){
+    var show = window.scrollY > 500;
+    btt.style.display = show ? 'flex' : 'none';
+    btt.style.opacity = show ? '1' : '0';
+    btt.style.transform = show ? 'translateY(0)' : 'translateY(10px)';
+  }, {passive:true});
+  btt.addEventListener('click', function(){ window.scrollTo({top:0,behavior:'smooth'}); });
+
+  showPromoPopup();
+  showWelcomeBanner();
+}
+
+function showWelcomeBanner() {
+  try {
+    var db = DB.data || DB.load();
+    var settings = (db.settings || {});
+    var wb = settings.welcomeBanner;
+    if (!wb || !wb.active) return;
+
+    var bar = document.createElement("div");
+    bar.className = "welcome-banner";
+    bar.innerHTML =
+      '<div class="wb-inner">' +
+        (wb.image ? '<img src="' + esc(wb.image) + '" alt="" class="wb-img">' : '') +
+        '<div class="wb-text">' +
+          (wb.title ? '<strong>' + esc(wb.title) + '</strong>' : '') +
+          (wb.message ? '<span>' + esc(wb.message) + '</span>' : '') +
+        '</div>' +
+        '<button class="wb-close" aria-label="Fermer">&times;</button>' +
+      '</div>';
+
+    var header = document.querySelector(".header") || document.querySelector("header");
+    if (header && header.parentNode) {
+      header.parentNode.insertBefore(bar, header);
+    } else {
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+    requestAnimationFrame(function(){ bar.classList.add("show"); });
+
+    bar.querySelector(".wb-close").addEventListener("click", function(){
+      bar.classList.remove("show");
+      setTimeout(function(){ bar.remove(); }, 300);
+    });
+  } catch(e) {}
+}
+
+function showPromoPopup() {
+  try {
+    var db = DB.data || DB.load();
+    var promos = (db.promos || []).filter(function(p){ return p.active; });
+    if (!promos.length) return;
+
+    var latest = promos[promos.length - 1];
+    var hasTimer = latest.timerEnd && new Date(latest.timerEnd) > new Date();
+
+    var overlay = document.createElement("div");
+    overlay.className = "promo-overlay";
+
+    var timerHtml = "";
+    if (hasTimer) {
+      timerHtml =
+        '<div class="promo-timer" id="promo-timer">' +
+          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-d">00</span><span class="promo-timer-lbl">Jours</span></div>' +
+          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-h">00</span><span class="promo-timer-lbl">Heures</span></div>' +
+          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-m">00</span><span class="promo-timer-lbl">Min</span></div>' +
+          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-s">00</span><span class="promo-timer-lbl">Sec</span></div>' +
+        '</div>';
+    }
+
+    var imgHtml = latest.image ? '<img src="' + esc(latest.image) + '" alt="" class="promo-img">' : '';
+
+    overlay.innerHTML =
+      '<div class="promo-modal">' +
+        '<button class="promo-close" aria-label="Fermer">&times;</button>' +
+        imgHtml +
+        '<div class="promo-img-decor"></div>' +
+        '<div class="promo-body">' +
+          '<span class="promo-eyebrow">' + esc(SITE.name || "Caftan Errouani") + '</span>' +
+          '<h2>' + esc(latest.title) + '</h2>' +
+          '<p>' + esc(latest.message) + '</p>' +
+          timerHtml +
+          (latest.btnText ? '<a class="promo-btn" href="' + esc(latest.btnLink || '#') + '" ' + (latest.btnLink && (latest.btnLink.indexOf("wa.me") > -1 || latest.linkType === "whatsapp") ? 'target="_blank" rel="noopener"' : '') + '>' + esc(latest.btnText) + '</a>' : '') +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ overlay.classList.add("show"); }); });
+
+    var timerInterval = null;
+    if (hasTimer) {
+      var endDate = new Date(latest.timerEnd).getTime();
+      function updateTimer() {
+        var now = Date.now();
+        var diff = endDate - now;
+        if (diff <= 0) {
+          clearInterval(timerInterval);
+          closePromo();
+          return;
+        }
+        var d = Math.floor(diff / 86400000);
+        var h = Math.floor((diff % 86400000) / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        var dEl = document.getElementById("pt-d");
+        var hEl = document.getElementById("pt-h");
+        var mEl = document.getElementById("pt-m");
+        var sEl = document.getElementById("pt-s");
+        if (dEl) dEl.textContent = d < 10 ? "0" + d : d;
+        if (hEl) hEl.textContent = h < 10 ? "0" + h : h;
+        if (mEl) mEl.textContent = m < 10 ? "0" + m : m;
+        if (sEl) sEl.textContent = s < 10 ? "0" + s : s;
+      }
+      updateTimer();
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function closePromo() {
+      if (timerInterval) clearInterval(timerInterval);
+      var modal = overlay.querySelector(".promo-modal");
+      if (modal) {
+        modal.style.transition = "transform .45s cubic-bezier(.4,0,1,1),opacity .4s ease,filter .4s ease";
+        modal.style.transform = "scale(.92) translateY(16px)";
+        modal.style.opacity = "0";
+        modal.style.filter = "blur(4px)";
+      }
+      overlay.style.opacity = "0";
+      setTimeout(function(){ overlay.remove(); }, 500);
+    }
+
+    overlay.querySelector(".promo-close").addEventListener("click", closePromo);
+    overlay.addEventListener("click", function(e){ if (e.target === overlay) closePromo(); });
+    document.addEventListener("keydown", function h(e){ if (e.key === "Escape") { closePromo(); document.removeEventListener("keydown", h); }});
+  } catch(e) {}
 }

@@ -326,6 +326,17 @@ function initRentalDetail() {
       window.open(waLink(msg), "_blank");
     }, 600);
   });
+
+  /* --- Produits similaires --- */
+  const related = document.getElementById("related-grid");
+  if (related) {
+    const rel = db.rentals.filter(x => x.id !== p.id).slice(0, 4);
+    if (rel.length) {
+      document.getElementById("related-section").style.display = "";
+      related.innerHTML = rel.map(rentalCard).join("");
+      observeReveals(related);
+    }
+  }
 }
 
 /* ================= BOUTIQUE ================= */
@@ -561,7 +572,7 @@ function initCheckout() {
         delivery: delivery ? delivery.value : "domicile",
         payment: payment ? payment.value : ""
       },
-      items: Cart.items(),
+      items: Cart.detailed().map(i => ({ id: i.id, name: i.name, size: i.cartSize, qty: i.cartQty, price: i.price })),
       subtotal: Cart.total(),
       fee: fee(),
       total: Cart.total() + fee(),

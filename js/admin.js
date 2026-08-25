@@ -2,6 +2,7 @@ const SESSION_KEY = "errouani_admin_session";
 const state = { section: "dash" };
 
 function $(sel) { return document.querySelector(sel); }
+function $$(sel) { return document.querySelectorAll(sel); }
 
 let toastTimerA;
 function toast(msg) {
@@ -24,6 +25,7 @@ const RES_STATUS = ["En attente", "Confirmée", "Refusée"];
 
 const CAL_ICON = '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
 const GIFT_ICON = '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/><path d="M12 8a3 3 0 1 0-3-3c0 2 3 3 3 3Zm0 0a3 3 0 1 1 3-3c0 2-3 3-3 3Z"/>';
+const POPUP_ICON = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/>';
 const NAV = [
   ["dash", "Tableau de bord", UI_ICONS.sparkle],
   ["rentals", "Caftans à louer", UI_ICONS.gem],
@@ -35,6 +37,7 @@ const NAV = [
   ["reservations", "Réservations", UI_ICONS.ruler],
   ["avail", "Disponibilités", CAL_ICON],
   ["messages", "Messages", UI_ICONS.wa],
+  ["promos", "Popups / Offres", POPUP_ICON],
   ["settings", "Paramètres", UI_ICONS.shield]
 ];
 
@@ -62,7 +65,7 @@ function go(section) {
   renderNav(computeBadges());
   const titles = Object.fromEntries(NAV.map(n => [n[0], n[1]]));
   $("#adm-title").textContent = titles[section];
-  const views = { dash: viewDash, rentals: viewRentals, shop: viewShop, acc: viewAcc, parties: viewParties, packs: viewPacks, orders: viewOrders, reservations: viewReservations, avail: viewAvail, messages: viewMessages, settings: viewSettings };
+  const views = { dash: viewDash, rentals: viewRentals, shop: viewShop, acc: viewAcc, parties: viewParties, packs: viewPacks, orders: viewOrders, reservations: viewReservations, avail: viewAvail, messages: viewMessages, promos: viewPromos, settings: viewSettings };
   (views[section] || viewDash)();
   $("#adm-side").classList.remove("open");
 }
@@ -214,8 +217,8 @@ function orderDetail(o) {
     ["Téléphone", o.customer.phone || "—"],
     ["Ville", o.customer.city || "—"],
     ["Adresse", o.customer.address || "—"],
-    ["Livraison", o.delivery || "—"],
-    ["Paiement", o.payment || "—"],
+    ["Livraison", o.customer.delivery === "point" ? "Point relais" : "Domicile"],
+    ["Paiement", o.customer.payment || "—"],
     ["Note", o.customer.note || "—"]
   ];
   openModal("Commande " + o.ref, `
@@ -246,6 +249,13 @@ function viewDash() {
     .sort((a, b) => String(a.from).localeCompare(String(b.from)))
     .slice(0, 5);
 
+  const totalRevenue = db.orders.reduce((s,o) => s + (o.total||0), 0);
+  const ordersCount = db.orders.length;
+  const resCount = db.reservations.length;
+  const unreadMsgs = db.messages.filter(m => !m.read).length;
+  const activeProducts = db.rentals.length + db.shop.length;
+  const pendingCount = db.reservations.filter(r => r.status === "En attente").length + db.orders.filter(o => o.status === "Nouvelle").length;
+
   const stat = (target, small, strong, em) => `
     <div class="stat-card" data-go="${target}" role="button" tabindex="0">
       <small>${small}</small><strong>${strong}</strong>
@@ -253,6 +263,15 @@ function viewDash() {
     </div>`;
 
   $("#adm-content").innerHTML = `
+  <div class="adm-kpis">
+    <div class="adm-kpi"><div class="adm-kpi-value">${money(totalRevenue)}</div><div class="adm-kpi-label">Revenus total</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-value">${ordersCount}</div><div class="adm-kpi-label">Commandes</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-value">${resCount}</div><div class="adm-kpi-label">Réservations</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-value">${unreadMsgs}</div><div class="adm-kpi-label">Messages non lus</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-value">${activeProducts}</div><div class="adm-kpi-label">Produits actifs</div></div>
+    <div class="adm-kpi"><div class="adm-kpi-value">${pendingCount}</div><div class="adm-kpi-label">En attente</div></div>
+  </div>
+
   <div class="stat-grid">
     ${stat("rentals", "Caftans à louer", db.rentals.length, db.rentals.filter(r => r.available !== false).length + " disponibles")}
     ${stat("shop", "Produits boutique", db.shop.length, lowStock.length ? lowStock.length + " épuisé(s)" : "stock OK")}
@@ -607,7 +626,7 @@ function viewOrders() {
           <td><strong>${esc(o.ref)}</strong><br><small>${new Date(o.created).toLocaleDateString("fr-FR")} ${new Date(o.created).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small></td>
           <td>${esc(o.customer.name)}<br><small>${esc(o.customer.phone)} · ${esc(o.customer.city)}</small></td>
           <td><small>${o.items.map(i => esc(i.name) + " ×" + i.qty).join("<br>")}</small></td>
-          <td><small>${esc(o.delivery)}<br>${esc(o.payment)}</small></td>
+          <td><small>${o.customer.delivery === "point" ? "Point relais" : "Domicile"}<br>${esc(o.customer.payment || "—")}</small></td>
           <td><strong>${money(o.total)}</strong></td>
           <td><select class="adm-select" data-order-status="${o.id}">${ORDER_STATUS.map(s => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
           <td><div class="row-actions">
@@ -751,6 +770,282 @@ function viewMessages() {
   bindEditButtons();
 }
 
+const PROMO_COLORS = [
+  { label: "Or", value: "#B8860B" },
+  { label: "Émeraude", value: "#0E5A45" },
+  { label: "Bordeaux", value: "#6B2230" },
+  { label: "Rose", value: "#D9A8A0" },
+  { label: "Noir", value: "#1a1a1a" },
+  { label: "Blanc cassé", value: "#FAF6F0" }
+];
+
+function viewPromos() {
+  const db = DB.data;
+  const promos = db.promos || [];
+  const active = promos.filter(p => p.active);
+  const inactive = promos.filter(p => !p.active);
+
+  function promoRow(p) {
+    const linkLabel = (() => {
+      const lt = p.linkType || "custom";
+      if (lt === "whatsapp") return "WhatsApp";
+      if (lt === "page_boutique") return "Boutique";
+      if (lt === "page_location") return "Location";
+      if (lt === "page_accessoires") return "Accessoires";
+      if (lt === "page_packs") return "Packs";
+      if (lt === "page_deco") return "Decoration";
+      if (lt === "page_apropos") return "A propos";
+      if (lt === "page_contact") return "Contact";
+      if (lt.startsWith("prod_")) { const s = db.shop.find(x => x.id === lt.slice(5)); return s ? s.name : "Produit"; }
+      if (lt.startsWith("rent_")) { const r = db.rentals.find(x => x.id === lt.slice(5)); return r ? r.name : "Location"; }
+      if (lt.startsWith("party_")) { const pt = db.parties.find(x => x.id === lt.slice(5)); return pt ? pt.name : "Pack fete"; }
+      if (p.btnLink) return (p.btnLink.length > 28 ? p.btnLink.slice(0, 28) + "..." : p.btnLink);
+      return "—";
+    })();
+    const timerInfo = p.timerEnd ? '<br><small style="color:var(--gold,#B8860B)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ' + new Date(p.timerEnd).toLocaleDateString("fr-FR", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) + '</small>' : '';
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:.65rem">
+        <span style="width:16px;height:16px;border-radius:50%;background:${esc(p.bgColor || '#B8860B')};display:inline-block;flex-shrink:0;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.12)"></span>
+        <div><strong>${esc(p.title)}</strong><br><small style="color:var(--muted)">${esc(p.btnText || "Voir")}${timerInfo}</small></div>
+      </div></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">${esc(p.message)}</td>
+      <td><span class="pill ${p.active ? 'pill-green' : 'pill-red'}">${p.active ? 'Active' : 'Inactive'}</span></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.84rem;color:var(--muted)">${linkLabel}</td>
+      <td><div class="row-actions" style="gap:.35rem">
+        <button class="abtn" data-promo-edit="${p.id}" title="Modifier cette popup">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Modifier
+        </button>
+        <button class="abtn ${p.active ? 'abtn-warn' : 'abtn-ok'}" data-promo-toggle="${p.id}" title="${p.active ? 'Desactiver' : 'Activer'}">
+          ${p.active ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Desactiver' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Activer'}
+        </button>
+        <button class="abtn abtn-danger" data-promo-del="${p.id}" title="Supprimer cette popup">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Suppr.
+        </button>
+      </div></td>
+    </tr>`;
+  }
+
+  $("#adm-content").innerHTML = `
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Popups / Offres speciales</h3>
+      <button class="btn-new" id="promo-new-btn">+ Nouvelle offre</button>
+    </div>
+    <p style="padding:0 1.5rem;color:var(--muted);font-size:.88rem;line-height:1.55">
+      Creez des popups promotionnelles qui s'affichent automatiquement aux visiteurs a chaque rafraichissement de page.
+      Seule la popup la plus recente et active est affichee.
+    </p>
+    ${active.length ? `
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr><th>Titre</th><th>Message</th><th>Etat</th><th>Lien</th><th>Actions</th></tr></thead>
+      <tbody>${active.map(promoRow).join("")}</tbody>
+    </table></div>` : ""}
+
+    ${inactive.length ? `
+    <div style="margin-top:1.2rem;padding:0 1.5rem">
+      <h4 style="font-family:'Cormorant Garamond',serif;color:var(--muted);margin-bottom:.8rem;font-size:1.05rem">Inactives (${inactive.length})</h4>
+      <div class="adm-table-wrap"><table class="adm-table">
+        <thead><tr><th>Titre</th><th>Message</th><th>Etat</th><th>Lien</th><th>Actions</th></tr></thead>
+        <tbody>${inactive.map(promoRow).join("")}</tbody>
+      </table></div>
+    </div>` : ""}
+
+    ${!promos.length ? `<div class="empty-admin"><strong>Aucune popup</strong><br>Cliquez sur « + Nouvelle offre » pour creer votre premiere popup promotionnelle.</div>` : ""}
+  </div>`;
+
+  bindEditButtons();
+
+  var contentEl = document.getElementById("adm-content");
+  if (contentEl && !contentEl._promoBound) {
+    contentEl._promoBound = true;
+    contentEl.addEventListener("click", function(e) {
+      var btn = e.target.closest("[data-promo-new]");
+      if (btn) { editPromo(null); return; }
+      var eb = e.target.closest("[data-promo-edit]");
+      if (eb) { e.preventDefault(); e.stopPropagation(); editPromo(eb.getAttribute("data-promo-edit")); return; }
+      var tb = e.target.closest("[data-promo-toggle]");
+      if (tb) {
+        e.preventDefault(); e.stopPropagation();
+        var tid = tb.getAttribute("data-promo-toggle");
+        var tp = (DB.data.promos || []).find(function(x){ return x.id === tid; });
+        if (tp) { tp.active = !tp.active; DB.save(); viewPromos(); toast(tp.active ? "Popup activee" : "Popup desactivee"); }
+        return;
+      }
+      var db2 = e.target.closest("[data-promo-del]");
+      if (db2) {
+        e.preventDefault(); e.stopPropagation();
+        if (!confirm("Supprimer cette popup ?")) return;
+        var did = db2.getAttribute("data-promo-del");
+        DB.data.promos = (DB.data.promos || []).filter(function(x){ return x.id !== did; });
+        DB.save(); viewPromos(); toast("Popup supprimee.");
+        return;
+      }
+    });
+  }
+}
+
+function editPromo(id) {
+  const db = DB.data;
+  const isNew = !id;
+  const promo = isNew ? { id: DB.id("promo_"), title: "", message: "", image: "", btnText: "J'en profite", btnLink: "", linkType: "custom", bgColor: "#B8860B", active: true, timerEnd: "" } : Object.assign({}, db.promos.find(p => p.id === id));
+  if (!promo.id) return;
+
+  const linkOptions = [
+    { value: "custom", label: "URL personnalisee" },
+    { value: "whatsapp", label: "WhatsApp" },
+    { value: "page_boutique", label: "Page Boutique" },
+    { value: "page_location", label: "Page Location" },
+    { value: "page_accessoires", label: "Page Accessoires" },
+    { value: "page_packs", label: "Page Packs" },
+    { value: "page_deco", label: "Page Decoration" },
+    { value: "page_apropos", label: "Page A propos" },
+    { value: "page_contact", label: "Page Contact" },
+  ];
+  (db.shop || []).forEach(p => linkOptions.push({ value: "prod_" + p.id, label: p.name }));
+  (db.rentals || []).forEach(p => linkOptions.push({ value: "rent_" + p.id, label: p.name }));
+  (db.parties || []).forEach(p => linkOptions.push({ value: "party_" + p.id, label: p.name }));
+
+  const detectLinkType = (link) => {
+    if (!link) return "custom";
+    if (link.includes("wa.me")) return "whatsapp";
+    if (link.includes("produit.html?id=")) return "prod_" + link.split("id=")[1];
+    if (link.includes("location-produit.html?id=")) return "rent_" + link.split("id=")[1];
+    return "custom";
+  };
+  const currentType = promo.linkType || detectLinkType(promo.btnLink);
+
+  const timerVal = promo.timerEnd ? promo.timerEnd.slice(0, 16) : "";
+
+  openModal(isNew ? "Nouvelle popup / offre" : "Modifier la popup", `
+    <div class="promo-form-section">
+      <div class="promo-form-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span>Contenu de la popup</span>
+      </div>
+      <div class="mf-grid">
+        ${f("title", "Titre de la popup *", promo.title, { full: true, placeholder: "Ex: Offre speciale Ramadan" })}
+        ${f("message", "Message affiche *", promo.message, { full: true, type: "textarea", rows: 3, placeholder: "Profitez de -20% sur toute la collection cette semaine !" })}
+      </div>
+    </div>
+
+    <div class="promo-form-section">
+      <div class="promo-form-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <span>Image & Apparence</span>
+      </div>
+      <div class="mf-grid">
+        ${f("image", "Image (URL ou chemin local)", promo.image, { full: true, placeholder: "https://... ou images/offre.jpg" })}
+        <div class="mf-field mf-full">
+          <label>Couleur du theme</label>
+          <input type="hidden" data-f="bgColor" value="${promo.bgColor || '#B8860B'}">
+          <div class="promo-color-picker">
+            ${PROMO_COLORS.map(c => `<button type="button" data-pcolor="${c.value}" class="promo-color-btn${promo.bgColor === c.value ? ' selected' : ''}" style="background:${c.value}" title="${c.label}"></button>`).join("")}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-form-section">
+      <div class="promo-form-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span>Bouton & Lien</span>
+      </div>
+      <div class="mf-grid">
+        ${f("btnText", "Texte du bouton CTA", promo.btnText, { placeholder: "J'en profite" })}
+        <div class="mf-field"><label>Lien du bouton</label>
+          <select data-f="linkType" id="promo-link-type" class="adm-select" style="width:100%">
+            ${linkOptions.map(o => `<option value="${esc(o.value)}" ${o.value === currentType ? "selected" : ""}>${esc(o.label)}</option>`).join("")}
+          </select>
+        </div>
+        ${f("btnLink", "URL personnalisee (si type = URL)", promo.btnLink, { full: true, placeholder: "https://..." })}
+      </div>
+    </div>
+
+    <div class="promo-form-section">
+      <div class="promo-form-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Minuteur & Statut</span>
+      </div>
+      <div class="mf-grid">
+        ${f("timerEnd", "Minuteur — date/heure de fin (optionnel)", timerVal, { full: true, type: "datetime-local", hint: "La popup se fermera automatiquement a cette date. Laissez vide pour un affichage permanent." })}
+        <div class="mf-field mf-full">
+          <div class="promo-active-toggle">
+            <label class="promo-toggle-switch">
+              <input type="checkbox" data-f="active" ${promo.active ? "checked" : ""}>
+              <span class="promo-toggle-slider"></span>
+            </label>
+            <div class="promo-toggle-label">
+              <strong>Popup active</strong>
+              <small style="color:var(--muted)">${promo.active ? 'Affichee aux visiteurs' : 'Desactivee — pas visible'}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `, (data) => {
+    if (!data.title || !data.message) { return "Titre et message requis"; }
+    data.bgColor = promo.bgColor || "#B8860B";
+    data.active = !!data.active;
+    data.id = promo.id;
+
+    const lt = data.linkType || "custom";
+    data.linkType = lt;
+    if (lt === "whatsapp") {
+      data.btnLink = waLink(data.btnText || "Bonjour !");
+    } else if (lt === "page_boutique") {
+      data.btnLink = "boutique.html";
+    } else if (lt === "page_location") {
+      data.btnLink = "location.html";
+    } else if (lt === "page_accessoires") {
+      data.btnLink = "accessoires.html";
+    } else if (lt === "page_packs") {
+      data.btnLink = "packs.html";
+    } else if (lt === "page_deco") {
+      data.btnLink = "decoration.html";
+    } else if (lt === "page_apropos") {
+      data.btnLink = "apropos.html";
+    } else if (lt === "page_contact") {
+      data.btnLink = "contact.html";
+    } else if (lt.startsWith("prod_")) {
+      data.btnLink = "produit.html?id=" + lt.slice(5);
+    } else if (lt.startsWith("rent_")) {
+      data.btnLink = "location-produit.html?id=" + lt.slice(5);
+    } else if (lt.startsWith("party_")) {
+      data.btnLink = "packs.html";
+    }
+
+    if (!data.timerEnd) delete data.timerEnd;
+
+    if (isNew) db.promos.push(data);
+    else {
+      const idx = db.promos.findIndex(p => p.id === data.id);
+      if (idx >= 0) Object.assign(db.promos[idx], data);
+    }
+  });
+
+  var linkTypeEl = document.getElementById("promo-link-type");
+  var btnLinkField = document.querySelector('[data-f="btnLink"]');
+  if (linkTypeEl && btnLinkField) {
+    var toggleCustomUrl = function() {
+      var isCustom = linkTypeEl.value === "custom";
+      btnLinkField.closest(".mf-field").style.display = isCustom ? "" : "none";
+    };
+    toggleCustomUrl();
+    linkTypeEl.addEventListener("change", toggleCustomUrl);
+  }
+
+  document.querySelectorAll("[data-pcolor]").forEach(function(b) {
+    b.addEventListener("click", function(e) {
+      e.preventDefault();
+      var color = b.getAttribute("data-pcolor");
+      document.querySelectorAll("[data-pcolor]").forEach(function(x) { x.classList.remove("selected"); });
+      b.classList.add("selected");
+      var hidden = document.querySelector('[data-f="bgColor"]');
+      if (hidden) hidden.value = color;
+      promo.bgColor = color;
+    });
+  });
+}
+
 function viewSettings() {
   const s = SITE;
   $("#adm-content").innerHTML = `
@@ -767,6 +1062,24 @@ function viewSettings() {
         ${f("hours", "Horaires", s.hours, { full: true })}
       </div>
       <button class="btn-new" id="save-site" style="margin-top:1.2rem">Enregistrer les coordonnées ✓</button>
+    </div>
+  </div>
+
+  <div class="adm-panel">
+    <div class="ap-head"><h3>Bannière d'accueil (visiteurs)</h3></div>
+    <p style="padding:0 1.5rem;color:var(--muted);font-size:.9rem">
+      Message de bienvenue affiché en haut du site à chaque visite. Désactivez-le pour masquer.
+    </p>
+    <div style="padding:1.5rem">
+      <div class="mf-grid">
+        ${f("wbTitle", "Titre", (DB.data.settings.welcomeBanner || {}).title || "", { full: true, placeholder: "Bienvenue chez Caftan Errouani" })}
+        ${f("wbMessage", "Message", (DB.data.settings.welcomeBanner || {}).message || "", { full: true, placeholder: "Livraison gratuite à Marrakech cette semaine !" })}
+        ${f("wbImage", "Image (URL ou chemin local)", (DB.data.settings.welcomeBanner || {}).image || "", { full: true, placeholder: "https://… ou images/welcome.jpg" })}
+        <div class="mf-field"><label>
+          <input type="checkbox" data-f="wbActive" ${(DB.data.settings.welcomeBanner || {}).active ? "checked" : ""} style="margin-right:.5rem"> Bannière active (affichée aux visiteurs)
+        </label></div>
+      </div>
+      <button class="btn-new" id="save-wb" style="margin-top:1.2rem">Enregistrer la bannière ✓</button>
     </div>
   </div>
 
@@ -799,6 +1112,16 @@ function viewSettings() {
     Object.assign(SITE, DB.data.settings.site);
     DB.save();
     toast("Coordonnées mises à jour — visibles immédiatement sur le site ✓");
+  });
+
+  $("#save-wb").addEventListener("click", () => {
+    const get = n => { const el = document.querySelector(`[data-f="${n}"]`); return el ? (el.type === "checkbox" ? el.checked : el.value.trim()) : ""; };
+    DB.data.settings.welcomeBanner = {
+      title: get("wbTitle"), message: get("wbMessage"),
+      image: get("wbImage"), active: !!get("wbActive")
+    };
+    DB.save();
+    toast("Bannière d'accueil mise à jour ✓");
   });
 
   $("#save-pin").addEventListener("click", () => {
@@ -866,7 +1189,7 @@ function bindEditButtons() {
   document.querySelectorAll("[data-del]").forEach(b =>
     b.addEventListener("click", () => {
       const parts = b.dataset.del.split("|");
-      const label = { rentals: "ce caftan", shop: "ce produit", accessories: "cet accessoire", parties: "ce pack fête", packs: "cette formule", orders: "cette commande", reservations: "cette réservation", messages: "ce message" }[parts[0]];
+      const label = { rentals: "ce caftan", shop: "ce produit", accessories: "cet accessoire", parties: "ce pack fête", packs: "cette formule", orders: "cette commande", reservations: "cette réservation", messages: "ce message", promos: "cette popup" }[parts[0]];
       if (!confirm("Supprimer définitivement " + label + " ?")) return;
       DB.data[parts[0]] = DB.data[parts[0]].filter(x => x.id !== parts[1]);
       DB.save();

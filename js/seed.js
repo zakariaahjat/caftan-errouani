@@ -197,6 +197,9 @@ function seedReservations() {
 function seedMessages() {
   return [];
 }
+function seedPromos() {
+  return [];
+}
 
 function buildSeedDB() {
   return {
@@ -208,6 +211,7 @@ function buildSeedDB() {
     parties: seedParties(),
     orders: seedOrders(),
     reservations: seedReservations(),
-    messages: seedMessages()
+    messages: seedMessages(),
+    promos: seedPromos()
   };
 }
