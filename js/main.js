@@ -237,6 +237,11 @@ function initRentalDetail() {
             <div class="form-field"><label for="res-name">Votre nom *</label><input type="text" id="res-name" required placeholder="Nom et prénom"></div>
             <div class="form-field"><label for="res-phone">Téléphone / WhatsApp *</label><input type="tel" id="res-phone" required placeholder="06 XX XX XX XX"></div>
             <div class="form-field"><label for="res-note">Message (facultatif)</label><textarea id="res-note" rows="2" placeholder="Votre événement, vos souhaits…"></textarea></div>
+            <div class="promo-code-bar" id="resa-promo-bar">
+              <input type="text" id="res-promo" placeholder="Code promo (facultatif)" maxlength="20" autocomplete="off">
+              <button type="button" id="res-promo-btn" class="btn btn-primary btn-sm">Appliquer</button>
+            </div>
+            <div id="res-promo-msg" class="promo-msg" style="display:none"></div>
             <button type="submit" class="btn btn-wa btn-lg btn-block">Vérifier &amp; réserver sur WhatsApp ${svgIcon(UI_ICONS.wa, 17)}</button>
           </form>
         </div>
@@ -313,19 +318,62 @@ function initRentalDetail() {
     if (to < from) { showToast("La date de fin doit suivre la date de début."); return; }
     if (rangeBlocked(from, to)) { showToast("Ces dates ne sont pas disponibles — choisissez-en d'autres 🙏"); return; }
 
+    var days = Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
+    var baseTotal = p.price * days;
+    var promoCode = "";
+    var promoDiscount = 0;
+    var total = baseTotal;
+
+    if (window._resaPromo) {
+      promoCode = window._resaPromo.promoCode || "";
+      promoDiscount = Math.round(baseTotal * (window._resaPromo.promoDiscount / 100));
+      total = baseTotal - promoDiscount;
+    }
+
     DB.data.reservations.push({
       id: DB.id("r"), productId: p.id, productName: p.name,
-      name, phone, note, from, to, price: p.price,
+      name, phone, note, from, to, price: p.price, days, baseTotal,
+      promoCode, promoDiscount, total,
       status: "En attente", created: new Date().toISOString()
     });
     DB.save();
+    window._resaPromo = null;
     showToast("Demande envoyée ✓ Finalisons sur WhatsApp !");
     setTimeout(() => {
-      const msg = `Bonjour ${SITE.name} ! Je souhaite réserver « ${p.name} » du ${from} au ${to} (${money(p.price)}/jour).\n👤 ${name}\n📞 ${phone}` +
+      const msg = `Bonjour ${SITE.name} ! Je souhaite réserver « ${p.name} » du ${from} au ${to} (${money(p.price)}/jour × ${days} jours).\n` +
+        (promoCode ? `🏷️ Code promo : ${promoCode} (−${money(promoDiscount)})\n` : "") +
+        `💰 Total : ${money(total)}\n👤 ${name}\n📞 ${phone}` +
         (note ? `\n📝 ${note}` : "");
       window.open(waLink(msg), "_blank");
     }, 600);
   });
+
+  var resaPromoBtn = document.getElementById("res-promo-btn");
+  var resaPromoInput = document.getElementById("res-promo");
+  var resaPromoMsg = document.getElementById("res-promo-msg");
+  window._resaPromo = null;
+
+  if (resaPromoBtn && resaPromoInput) {
+    resaPromoBtn.addEventListener("click", function() {
+      var code = resaPromoInput.value.trim().toUpperCase();
+      if (!code) { resaPromoMsg.style.display = ""; resaPromoMsg.className = "promo-msg promo-msg-err"; resaPromoMsg.textContent = "Entrez un code promo."; return; }
+      var now = new Date();
+      var match = (DB.data.promos || []).filter(function(pr) {
+        return pr.active && pr.promoType === "code" && pr.promoCode && pr.promoCode.toUpperCase() === code;
+      });
+      if (!match.length) { resaPromoMsg.style.display = ""; resaPromoMsg.className = "promo-msg promo-msg-err"; resaPromoMsg.textContent = "Code invalide."; window._resaPromo = null; return; }
+      var promo = match[match.length - 1];
+      if (promo.promoStart && new Date(promo.promoStart) > now) { resaPromoMsg.style.display = ""; resaPromoMsg.className = "promo-msg promo-msg-err"; resaPromoMsg.textContent = "Ce code n'est pas encore actif."; window._resaPromo = null; return; }
+      if (promo.promoEnd && new Date(promo.promoEnd) < now) { resaPromoMsg.style.display = ""; resaPromoMsg.className = "promo-msg promo-msg-err"; resaPromoMsg.textContent = "Ce code a expire."; window._resaPromo = null; return; }
+      var prodMatch = !promo.promoProducts || !promo.promoProducts.length || promo.promoProducts.indexOf(p.id) >= 0;
+      if (!prodMatch) { resaPromoMsg.style.display = ""; resaPromoMsg.className = "promo-msg promo-msg-err"; resaPromoMsg.textContent = "Ce code ne s'applique pas a ce caftan."; window._resaPromo = null; return; }
+      window._resaPromo = promo;
+      resaPromoMsg.style.display = "";
+      resaPromoMsg.className = "promo-msg promo-msg-ok";
+      resaPromoMsg.textContent = "Code applique ! −" + promo.promoDiscount + "% sur la location.";
+    });
+    resaPromoInput.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); resaPromoBtn.click(); } });
+  }
 
   /* --- Produits similaires --- */
   const related = document.getElementById("related-grid");
@@ -538,15 +586,68 @@ function initCheckout() {
       <strong>${money(r.price * r.cartQty)}</strong>
     </li>`).join("");
 
+  var appliedPromo = null;
+
   function fee() {
     const sel = wrap.querySelector('input[name="delivery"]:checked');
     return DELIVERY_FEES[sel ? sel.value : "domicile"] ?? 50;
   }
+
+  function calcDiscount() {
+    if (!appliedPromo) return 0;
+    var cartItems = Cart.detailed();
+    var promoProducts = appliedPromo.promoProducts || [];
+    var discount = 0;
+    cartItems.forEach(function(item) {
+      var match = promoProducts.length === 0 || promoProducts.indexOf(item.id) >= 0;
+      if (match) {
+        discount += item.price * item.cartQty * (appliedPromo.promoDiscount / 100);
+      }
+    });
+    return Math.round(discount);
+  }
+
   function totals() {
     const sub = Cart.total(), f = fee();
+    var disc = calcDiscount();
     document.getElementById("co-subtotal").textContent = money(sub);
+    var discLine = document.getElementById("co-discount-line");
+    if (disc > 0) {
+      discLine.style.display = "";
+      document.getElementById("co-discount-label").textContent = "(" + appliedPromo.promoCode + " −" + appliedPromo.promoDiscount + "%)";
+      document.getElementById("co-discount").textContent = "−" + money(disc);
+    } else {
+      discLine.style.display = "none";
+    }
     document.getElementById("co-fee").textContent = f === 0 ? "Offerte ✓" : money(f);
-    document.getElementById("co-total").textContent = money(sub + f);
+    document.getElementById("co-total").textContent = money(sub - disc + f);
+  }
+
+  var promoBtn = document.getElementById("ck-promo-btn");
+  var promoInput = document.getElementById("ck-promo");
+  var promoMsg = document.getElementById("promo-msg");
+
+  if (promoBtn && promoInput) {
+    promoBtn.addEventListener("click", function() {
+      var code = promoInput.value.trim().toUpperCase();
+      if (!code) { promoMsg.style.display = ""; promoMsg.className = "promo-msg promo-msg-err"; promoMsg.textContent = "Entrez un code promo."; return; }
+      var now = new Date();
+      var promos = (DB.data.promos || []).filter(function(p) {
+        return p.active && p.promoType === "code" && p.promoCode && p.promoCode.toUpperCase() === code;
+      });
+      if (!promos.length) { promoMsg.style.display = ""; promoMsg.className = "promo-msg promo-msg-err"; promoMsg.textContent = "Code promo invalide ou inexistant."; appliedPromo = null; totals(); return; }
+      var promo = promos[promos.length - 1];
+      if (promo.promoStart && new Date(promo.promoStart) > now) { promoMsg.style.display = ""; promoMsg.className = "promo-msg promo-msg-err"; promoMsg.textContent = "Ce code n'est pas encore actif."; appliedPromo = null; totals(); return; }
+      if (promo.promoEnd && new Date(promo.promoEnd) < now) { promoMsg.style.display = ""; promoMsg.className = "promo-msg promo-msg-err"; promoMsg.textContent = "Ce code a expire."; appliedPromo = null; totals(); return; }
+      appliedPromo = promo;
+      var disc = calcDiscount();
+      if (disc <= 0) { promoMsg.style.display = ""; promoMsg.className = "promo-msg promo-msg-err"; promoMsg.textContent = "Ce code ne s'applique pas a vos articles."; appliedPromo = null; totals(); return; }
+      promoMsg.style.display = "";
+      promoMsg.className = "promo-msg promo-msg-ok";
+      promoMsg.textContent = "Code applique ! −" + promo.promoDiscount + "% de reduction (" + money(disc) + ")";
+      totals();
+    });
+    promoInput.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); promoBtn.click(); } });
   }
 
   wrap.querySelectorAll('input[name="delivery"]').forEach(r => r.addEventListener("change", () => {
@@ -561,6 +662,7 @@ function initCheckout() {
     const ref = "CMD-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     const delivery = wrap.querySelector('input[name="delivery"]:checked');
     const payment = wrap.querySelector('input[name="payment"]:checked');
+    var disc = calcDiscount();
     const order = {
       id: DB.id("o"), ref,
       customer: {
@@ -573,9 +675,11 @@ function initCheckout() {
         payment: payment ? payment.value : ""
       },
       items: Cart.detailed().map(i => ({ id: i.id, name: i.name, size: i.cartSize, qty: i.cartQty, price: i.price })),
+      promoCode: appliedPromo ? appliedPromo.promoCode : "",
+      promoDiscount: disc,
       subtotal: Cart.total(),
       fee: fee(),
-      total: Cart.total() + fee(),
+      total: Cart.total() - disc + fee(),
       status: "Nouvelle",
       created: new Date().toISOString()
     };
@@ -589,6 +693,7 @@ function initCheckout() {
     refreshCartBadge();
     const waSummary = `Bonjour ${SITE.name} ! Nouvelle commande ${order.ref} :\n` +
       order.items.map(i => `• ${i.name} ×${i.qty}`).join("\n") +
+      (order.promoCode ? `\n🏷️ Code promo : ${order.promoCode} (−${order.promoDiscount} DH)` : "") +
       `\n💰 Total : ${money(order.total)} (${order.customer.payment})\n🚚 ${order.customer.delivery === "point" ? "Point relais" : "Domicile"} — ${order.customer.city}, ${order.customer.address}\n👤 ${order.customer.name} — 📞 ${order.customer.phone}` +
       (order.customer.note ? `\n📝 ${order.customer.note}` : "");
     setTimeout(() => window.open(waLink(waSummary), "_blank"), 600);
@@ -597,7 +702,7 @@ function initCheckout() {
       <div class="success-icon">${svgIcon(UI_ICONS.check, 40)}</div>
       <h2>Merci ${esc(order.customer.name.split(" ")[0])} ! 🎉</h2>
       <p>Votre commande <strong>${order.ref}</strong> est bien reçue.<br>Nous vous appelons très vite pour la confirmer.</p>
-      <p class="results-count">Total : ${money(order.total)} · ${esc(order.customer.payment)}</p>
+      <p class="results-count">Total : ${money(order.total)}${order.promoCode ? ' · Code ' + esc(order.promoCode) : ''} · ${esc(order.customer.payment)}</p>
       <div style="display:flex;gap:.8rem;justify-content:center;margin-top:1.6rem">
         <a class="btn btn-wa" target="_blank" rel="noopener" href="${waLink("Bonjour ! Je viens de passer la commande " + order.ref + ".")}">Confirmer sur WhatsApp</a>
         <a class="btn btn-outline" href="index.html">Retour à l'accueil</a>

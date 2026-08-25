@@ -201,7 +201,7 @@
 .da-list a:hover{color:#175247;background:#FAF6EC}
 
 /* ===== Connexion par code email ===== */
-#login-code{width:100%;padding:.95rem 1.1rem;margin:.9rem 0 .2rem;font-size:1.25rem;letter-spacing:.35em;text-align:center;font-family:Georgia,serif;border:1px solid #E5DBC7;border-radius:10px;background:#FDFAF3;color:#26231F;outline:none;transition:.25s}
+#login-code{width:100%;padding:.95rem 1.1rem;margin:.9rem 0 .2rem;font-size:1.15rem;letter-spacing:.2em;text-align:center;font-family:Georgia,serif;border:1px solid #E5DBC7;border-radius:10px;background:#FDFAF3;color:#26231F;outline:none;transition:.25s}
 #login-code:focus{border-color:#A98340;box-shadow:0 0 0 3px rgba(169,131,64,.15)}
 .al-timer{min-height:1.3rem;font-size:.85rem;color:#175247;font-weight:600;margin-top:.6rem}
 .al-ok{min-height:1.2rem;font-size:.82rem;color:#175247;margin-top:.4rem}
@@ -249,3 +249,25 @@
 .abtn-warn:hover{background:#D4A843;color:#fff}
 .abtn-ok{border-color:#175247;color:#175247;background:rgba(23,82,71,.06)}
 .abtn-ok:hover{background:#175247;color:#fff}
+
+.promo-upload-area{
+  border:2px dashed #D5CBB8;border-radius:14px;padding:1.2rem;text-align:center;
+  cursor:pointer;transition:all .3s;background:#FBF7EF;min-height:120px;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;
+}
+.promo-upload-area:hover,.promo-upload-area.dragover{border-color:#B8860B;background:rgba(184,134,11,.04)}
+.promo-upload-area p{color:#756C5D;font-size:.85rem;margin:0}
+.promo-upload-preview{max-width:100%;max-height:180px;border-radius:10px;object-fit:cover;display:block;margin:0 auto}
+.promo-prod-list{max-height:220px;overflow-y:auto;border:1px solid #E5DBC7;border-radius:10px;padding:.5rem;background:#FBF7EF;display:flex;flex-direction:column;gap:2px}
+.promo-prod-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .6rem;border-radius:8px;cursor:pointer;transition:background .15s;font-size:.88rem}
+.promo-prod-item:hover{background:rgba(184,134,11,.06)}
+.promo-prod-item input[type="checkbox"]{accent-color:#175247;width:16px;height:16px;flex-shrink:0}
+.promo-prod-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.promo-prod-price{color:#756C5D;font-size:.78rem;flex-shrink:0}
+
+.promo-type-switch{display:flex;gap:.5rem}
+.promo-type-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.7rem 1rem;border:2px solid #E5DBC7;border-radius:12px;background:#FBF7EF;cursor:pointer;font-size:.85rem;font-weight:500;color:#756C5D;transition:all .25s}
+.promo-type-btn:hover{border-color:#C6A15B;color:#8B7330}
+.promo-type-btn.active{border-color:#175247;background:rgba(23,82,71,.06);color:#175247;font-weight:600}
+.promo-discount-row{display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;background:#FBF7EF;border:1px solid #E5DBC7;border-radius:10px}
+.promo-discount-row input{border:none;background:transparent;font-size:1.4rem;font-weight:700;color:#175247;outline:none;width:60px}

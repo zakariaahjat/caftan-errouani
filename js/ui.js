@@ -527,88 +527,179 @@ function showWelcomeBanner() {
 function showPromoPopup() {
   try {
     var db = DB.data || DB.load();
-    var promos = (db.promos || []).filter(function(p){ return p.active; });
+    var promos = (db.promos || []).filter(function(p){ return p.active && p.promoType !== "code"; });
     if (!promos.length) return;
 
-    var latest = promos[promos.length - 1];
-    var hasTimer = latest.timerEnd && new Date(latest.timerEnd) > new Date();
+    function showOne(promo, onDone) {
+      var hasTimer = promo.timerEnd && new Date(promo.timerEnd) > new Date();
+      var isCode = promo.promoType === "code";
 
-    var overlay = document.createElement("div");
-    overlay.className = "promo-overlay";
+      var overlay = document.createElement("div");
+      overlay.className = "promo-overlay";
 
-    var timerHtml = "";
-    if (hasTimer) {
-      timerHtml =
-        '<div class="promo-timer" id="promo-timer">' +
-          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-d">00</span><span class="promo-timer-lbl">Jours</span></div>' +
-          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-h">00</span><span class="promo-timer-lbl">Heures</span></div>' +
-          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-m">00</span><span class="promo-timer-lbl">Min</span></div>' +
-          '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-s">00</span><span class="promo-timer-lbl">Sec</span></div>' +
+      var timerHtml = "";
+      if (hasTimer) {
+        timerHtml =
+          '<div class="promo-timer" id="promo-timer">' +
+            '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-d">00</span><span class="promo-timer-lbl">Jours</span></div>' +
+            '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-h">00</span><span class="promo-timer-lbl">Heures</span></div>' +
+            '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-m">00</span><span class="promo-timer-lbl">Min</span></div>' +
+            '<div class="promo-timer-unit"><span class="promo-timer-val" id="pt-s">00</span><span class="promo-timer-lbl">Sec</span></div>' +
+          '</div>';
+      }
+
+      var codeHtml = "";
+      if (isCode && promo.promoCode) {
+        var now = new Date();
+        var startOk = !promo.promoStart || new Date(promo.promoStart) <= now;
+        var endOk = !promo.promoEnd || new Date(promo.promoEnd) >= now;
+        var validBadge = (startOk && endOk) ? '<span class="promo-valid-badge">Valide</span>' : '<span class="promo-valid-badge promo-expired">Expir</span>';
+        codeHtml =
+          '<div class="promo-code-block">' +
+            '<div class="promo-discount-display">-' + esc(String(promo.promoDiscount || "0")) + '%</div>' +
+            '<div class="promo-code-row">' +
+              '<span class="promo-code-text">Code : <strong>' + esc(promo.promoCode) + '</strong></span>' +
+              '<button class="promo-code-copy" data-code="' + esc(promo.promoCode) + '" title="Copier">Copier</button>' +
+            '</div>' +
+            validBadge +
+          '</div>';
+      } else if (!isCode && promo.promoCode) {
+        codeHtml = '<div class="promo-code-badge">Code : <strong>' + esc(promo.promoCode) + '</strong> <button class="promo-code-copy" data-code="' + esc(promo.promoCode) + '" title="Copier">Copier</button></div>';
+      }
+
+      var btnHtml = "";
+      if (!isCode && promo.btnText) {
+        btnHtml = '<a class="promo-btn" href="' + esc(promo.btnLink || '#') + '" ' + (promo.btnLink && (promo.btnLink.indexOf("wa.me") > -1 || promo.linkType === "whatsapp") ? 'target="_blank" rel="noopener"' : '') + '>' + esc(promo.btnText) + '</a>';
+      } else if (isCode) {
+        var shopLink = promo.btnLink || "boutique.html";
+        btnHtml = '<a class="promo-btn" href="' + esc(shopLink) + '">Voir la boutique</a>';
+      }
+
+      var bgStyle = promo.image ? 'background-image:url(\'' + promo.image.replace(/'/g, "\\'") + '\')' : '';
+
+      overlay.innerHTML =
+        '<div class="promo-modal promo-cover">' +
+          '<div class="promo-cover-bg" style="' + bgStyle + '"></div>' +
+          '<div class="promo-cover-overlay"></div>' +
+          '<button class="promo-close" aria-label="Fermer">&times;</button>' +
+          '<div class="promo-cover-body">' +
+            '<span class="promo-eyebrow">' + esc(SITE.name || "Caftan Errouani") + '</span>' +
+            '<h2>' + esc(promo.title) + '</h2>' +
+            '<p>' + esc(promo.message) + '</p>' +
+            codeHtml +
+            timerHtml +
+            btnHtml +
+          '</div>' +
         '</div>';
-    }
 
-    var imgHtml = latest.image ? '<img src="' + esc(latest.image) + '" alt="" class="promo-img">' : '';
-
-    overlay.innerHTML =
-      '<div class="promo-modal">' +
-        '<button class="promo-close" aria-label="Fermer">&times;</button>' +
-        imgHtml +
-        '<div class="promo-img-decor"></div>' +
-        '<div class="promo-body">' +
-          '<span class="promo-eyebrow">' + esc(SITE.name || "Caftan Errouani") + '</span>' +
-          '<h2>' + esc(latest.title) + '</h2>' +
-          '<p>' + esc(latest.message) + '</p>' +
-          timerHtml +
-          (latest.btnText ? '<a class="promo-btn" href="' + esc(latest.btnLink || '#') + '" ' + (latest.btnLink && (latest.btnLink.indexOf("wa.me") > -1 || latest.linkType === "whatsapp") ? 'target="_blank" rel="noopener"' : '') + '>' + esc(latest.btnText) + '</a>' : '') +
-        '</div>' +
-      '</div>';
-
-    document.body.appendChild(overlay);
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){ overlay.classList.add("show"); }); });
-
-    var timerInterval = null;
-    if (hasTimer) {
-      var endDate = new Date(latest.timerEnd).getTime();
-      function updateTimer() {
-        var now = Date.now();
-        var diff = endDate - now;
-        if (diff <= 0) {
-          clearInterval(timerInterval);
-          closePromo();
-          return;
-        }
-        var d = Math.floor(diff / 86400000);
-        var h = Math.floor((diff % 86400000) / 3600000);
-        var m = Math.floor((diff % 3600000) / 60000);
-        var s = Math.floor((diff % 60000) / 1000);
-        var dEl = document.getElementById("pt-d");
-        var hEl = document.getElementById("pt-h");
-        var mEl = document.getElementById("pt-m");
-        var sEl = document.getElementById("pt-s");
-        if (dEl) dEl.textContent = d < 10 ? "0" + d : d;
-        if (hEl) hEl.textContent = h < 10 ? "0" + h : h;
-        if (mEl) mEl.textContent = m < 10 ? "0" + m : m;
-        if (sEl) sEl.textContent = s < 10 ? "0" + s : s;
-      }
-      updateTimer();
-      timerInterval = setInterval(updateTimer, 1000);
-    }
-
-    function closePromo() {
-      if (timerInterval) clearInterval(timerInterval);
+      document.body.appendChild(overlay);
       var modal = overlay.querySelector(".promo-modal");
-      if (modal) {
-        modal.style.transition = "transform .45s cubic-bezier(.4,0,1,1),opacity .4s ease,filter .4s ease";
-        modal.style.transform = "scale(.92) translateY(16px)";
-        modal.style.opacity = "0";
-        modal.style.filter = "blur(4px)";
+
+      function adaptModalSize(img) {
+        if (!img || !img.naturalWidth || !img.naturalHeight) return;
+        var ratio = img.naturalWidth / img.naturalHeight;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var maxW = Math.min(480, vw * 0.92);
+        var maxH = vh * 0.85;
+        var w, h;
+        if (ratio >= 1) {
+          w = maxW;
+          h = w / ratio;
+          if (h > maxH) { h = maxH; w = h * ratio; }
+        } else {
+          h = maxH;
+          w = h * ratio;
+          if (w > maxW) { w = maxW; h = w / ratio; }
+        }
+        modal.style.maxWidth = Math.round(w) + "px";
+        modal.style.maxHeight = Math.round(h) + "px";
       }
-      overlay.style.opacity = "0";
-      setTimeout(function(){ overlay.remove(); }, 500);
+
+      var timerInterval = null;
+      function closePromo() {
+        if (timerInterval) clearInterval(timerInterval);
+        var m = overlay.querySelector(".promo-modal");
+        if (m) {
+          m.style.transition = "transform .45s cubic-bezier(.4,0,1,1),opacity .4s ease,filter .4s ease";
+          m.style.transform = "scale(.92) translateY(16px)";
+          m.style.opacity = "0";
+          m.style.filter = "blur(4px)";
+        }
+        overlay.style.opacity = "0";
+        setTimeout(function(){
+          overlay.remove();
+          if (onDone) setTimeout(onDone, 300);
+        }, 500);
+      }
+
+      overlay.querySelector(".promo-close").addEventListener("click", closePromo);
+      overlay.addEventListener("click", function(e){ if (e.target === overlay) closePromo(); });
+      document.addEventListener("keydown", function h(e){ if (e.key === "Escape") { closePromo(); document.removeEventListener("keydown", h); }});
+
+      var copyBtn = overlay.querySelector(".promo-code-copy");
+      if (copyBtn) {
+        copyBtn.addEventListener("click", function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var code = copyBtn.getAttribute("data-code");
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(function(){ toast("Code copie !"); });
+          } else {
+            var ta = document.createElement("textarea");
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            ta.remove();
+            toast("Code copie !");
+          }
+        });
+      }
+
+      if (hasTimer) {
+        var endDate = new Date(promo.timerEnd).getTime();
+        function updateTimer() {
+          var now = Date.now();
+          var diff = endDate - now;
+          if (diff <= 0) { clearInterval(timerInterval); closePromo(); return; }
+          var d = Math.floor(diff / 86400000);
+          var h = Math.floor((diff % 86400000) / 3600000);
+          var m = Math.floor((diff % 3600000) / 60000);
+          var s = Math.floor((diff % 60000) / 1000);
+          var dEl = document.getElementById("pt-d");
+          var hEl = document.getElementById("pt-h");
+          var mEl = document.getElementById("pt-m");
+          var sEl = document.getElementById("pt-s");
+          if (dEl) dEl.textContent = d < 10 ? "0" + d : d;
+          if (hEl) hEl.textContent = h < 10 ? "0" + h : h;
+          if (mEl) mEl.textContent = m < 10 ? "0" + m : m;
+          if (sEl) sEl.textContent = s < 10 ? "0" + s : s;
+        }
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 1000);
+      }
+
+      if (promo.image) {
+        var probeImg = new Image();
+        probeImg.onload = function() {
+          adaptModalSize(probeImg);
+          overlay.classList.add("show");
+        };
+        probeImg.onerror = function() { overlay.classList.add("show"); };
+        probeImg.src = promo.image;
+      } else {
+        modal.style.maxWidth = "420px";
+        overlay.classList.add("show");
+      }
     }
 
-    overlay.querySelector(".promo-close").addEventListener("click", closePromo);
-    overlay.addEventListener("click", function(e){ if (e.target === overlay) closePromo(); });
-    document.addEventListener("keydown", function h(e){ if (e.key === "Escape") { closePromo(); document.removeEventListener("keydown", h); }});
+    var queue = promos.slice();
+    function showNext() {
+      if (!queue.length) return;
+      showOne(queue.shift(), showNext);
+    }
+    showOne(queue.shift(), showNext);
+
   } catch(e) {}
 }

@@ -655,12 +655,13 @@ function viewReservations() {
   <div class="adm-panel">
     <div class="ap-head"><h3>Demandes de réservation (${db.reservations.length})</h3>${searchBox("Cliente, caftan…")}</div>
     <div class="adm-table-wrap"><table class="adm-table">
-      <thead><tr><th>Caftan</th><th>Période</th><th>Cliente</th><th>Statut</th><th></th></tr></thead>
+      <thead><tr><th>Caftan</th><th>Periode</th><th>Cliente</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
       <tbody>${db.reservations.map(r => `
         <tr>
-          <td><strong>${esc(r.productName)}</strong></td>
+          <td><strong>${esc(r.productName)}</strong>${r.promoCode ? '<br><small style="color:#175247">🏷️ ' + esc(r.promoCode) + ' (−' + (r.promoDiscount || 0) + ' DH)</small>' : ''}</td>
           <td>${esc(r.from)}<br>→ ${esc(r.to)}</td>
           <td>${esc(r.name)}<br><small>${esc(r.phone || "—")}</small></td>
+          <td style="white-space:nowrap">${r.total ? '<strong>' + money(r.total) + '</strong>' + (r.promoDiscount ? '<br><small style="color:#175247"><s>' + money(r.baseTotal) + '</s></small>' : '') : '—'}</td>
           <td><select class="adm-select" data-res-status="${r.id}">${RES_STATUS.map(s => `<option ${s === r.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
           <td><div class="row-actions">
             <button class="abtn abtn-primary" data-block-dates="${r.id}" title="Marquer ces dates comme réservées dans le calendrier public">Bloquer les dates</button>
@@ -873,12 +874,12 @@ function viewPromos() {
 }
 
 function editPromo(id) {
-  const db = DB.data;
-  const isNew = !id;
-  const promo = isNew ? { id: DB.id("promo_"), title: "", message: "", image: "", btnText: "J'en profite", btnLink: "", linkType: "custom", bgColor: "#B8860B", active: true, timerEnd: "" } : Object.assign({}, db.promos.find(p => p.id === id));
+  var db = DB.data;
+  var isNew = !id;
+  var promo = isNew ? { id: DB.id("promo_"), title: "", message: "", image: "", btnText: "J'en profite", btnLink: "", linkType: "custom", bgColor: "#B8860B", active: true, timerEnd: "", promoType: "offre", promoCode: "", promoDiscount: "", promoProducts: [], promoStart: "", promoEnd: "" } : Object.assign({}, db.promos.find(function(p){ return p.id === id; }));
   if (!promo.id) return;
 
-  const linkOptions = [
+  var linkOptions = [
     { value: "custom", label: "URL personnalisee" },
     { value: "whatsapp", label: "WhatsApp" },
     { value: "page_boutique", label: "Page Boutique" },
@@ -889,94 +890,213 @@ function editPromo(id) {
     { value: "page_apropos", label: "Page A propos" },
     { value: "page_contact", label: "Page Contact" },
   ];
-  (db.shop || []).forEach(p => linkOptions.push({ value: "prod_" + p.id, label: p.name }));
-  (db.rentals || []).forEach(p => linkOptions.push({ value: "rent_" + p.id, label: p.name }));
-  (db.parties || []).forEach(p => linkOptions.push({ value: "party_" + p.id, label: p.name }));
+  (db.shop || []).forEach(function(p){ linkOptions.push({ value: "prod_" + p.id, label: p.name }); });
+  (db.rentals || []).forEach(function(p){ linkOptions.push({ value: "rent_" + p.id, label: p.name }); });
+  (db.parties || []).forEach(function(p){ linkOptions.push({ value: "party_" + p.id, label: p.name }); });
 
-  const detectLinkType = (link) => {
+  var detectLinkType = function(link) {
     if (!link) return "custom";
-    if (link.includes("wa.me")) return "whatsapp";
-    if (link.includes("produit.html?id=")) return "prod_" + link.split("id=")[1];
-    if (link.includes("location-produit.html?id=")) return "rent_" + link.split("id=")[1];
+    if (link.indexOf("wa.me") > -1) return "whatsapp";
+    if (link.indexOf("produit.html?id=") > -1) return "prod_" + link.split("id=")[1];
+    if (link.indexOf("location-produit.html?id=") > -1) return "rent_" + link.split("id=")[1];
     return "custom";
   };
-  const currentType = promo.linkType || detectLinkType(promo.btnLink);
+  var currentType = promo.linkType || detectLinkType(promo.btnLink);
+  var timerVal = promo.timerEnd ? promo.timerEnd.slice(0, 16) : "";
+  var selectedProducts = promo.promoProducts || [];
+  var isCodeType = promo.promoType === "code";
 
-  const timerVal = promo.timerEnd ? promo.timerEnd.slice(0, 16) : "";
+  var shopItemsHtml = (db.shop || []).map(function(p) {
+    var checked = selectedProducts.indexOf(p.id) >= 0 ? "checked" : "";
+    return '<label class="promo-prod-item"><input type="checkbox" data-f="pprod" value="' + esc(p.id) + '" ' + checked + '> <span class="promo-prod-name">' + esc(p.name) + '</span> <span class="promo-prod-price">' + (p.price ? p.price + " DH" : "") + '</span></label>';
+  }).join("");
+  var rentalItemsHtml = (db.rentals || []).map(function(p) {
+    var checked = selectedProducts.indexOf(p.id) >= 0 ? "checked" : "";
+    return '<label class="promo-prod-item"><input type="checkbox" data-f="pprod" value="' + esc(p.id) + '" ' + checked + '> <span class="promo-prod-name">' + esc(p.name) + '</span> <span class="promo-prod-price">' + (p.price ? p.price + " DH/j" : "") + '</span></label>';
+  }).join("");
 
-  openModal(isNew ? "Nouvelle popup / offre" : "Modifier la popup", `
-    <div class="promo-form-section">
-      <div class="promo-form-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-        <span>Contenu de la popup</span>
-      </div>
-      <div class="mf-grid">
-        ${f("title", "Titre de la popup *", promo.title, { full: true, placeholder: "Ex: Offre speciale Ramadan" })}
-        ${f("message", "Message affiche *", promo.message, { full: true, type: "textarea", rows: 3, placeholder: "Profitez de -20% sur toute la collection cette semaine !" })}
-      </div>
-    </div>
+  openModal(isNew ? "Nouvelle offre" : "Modifier l'offre", '' +
+    '<div class="promo-form-section">' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>' +
+        '<span>Type d\'offre</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        '<div class="mf-field mf-full">' +
+          '<label>Type</label>' +
+          '<div class="promo-type-switch">' +
+            '<button type="button" class="promo-type-btn' + (!isCodeType ? ' active' : '') + '" data-promo-type="offre">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg> Offre promotionnelle' +
+            '</button>' +
+            '<button type="button" class="promo-type-btn' + (isCodeType ? ' active' : '') + '" data-promo-type="code">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg> Code promo' +
+            '</button>' +
+          '</div>' +
+          '<input type="hidden" data-f="promoType" value="' + esc(promo.promoType || "offre") + '">' +
+          '<small style="color:var(--muted);font-size:.78rem;display:block;margin-top:.4rem">' +
+            (isCodeType ? 'Le visiteur entre un code pour beneficier d\'une reduction sur des produits specifiques.' : 'Popup vitrine qui s\'affiche a chaque visite — image cover + titre + bouton CTA.') +
+          '</small>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
 
-    <div class="promo-form-section">
-      <div class="promo-form-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        <span>Image & Apparence</span>
-      </div>
-      <div class="mf-grid">
-        ${f("image", "Image (URL ou chemin local)", promo.image, { full: true, placeholder: "https://... ou images/offre.jpg" })}
-        <div class="mf-field mf-full">
-          <label>Couleur du theme</label>
-          <input type="hidden" data-f="bgColor" value="${promo.bgColor || '#B8860B'}">
-          <div class="promo-color-picker">
-            ${PROMO_COLORS.map(c => `<button type="button" data-pcolor="${c.value}" class="promo-color-btn${promo.bgColor === c.value ? ' selected' : ''}" style="background:${c.value}" title="${c.label}"></button>`).join("")}
-          </div>
-        </div>
-      </div>
-    </div>
+    '<div class="promo-form-section">' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>' +
+        '<span>Contenu</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        f("title", "Titre *", promo.title, { full: true, placeholder: isCodeType ? "Ex: -20% sur les caftans" : "Ex: Offre speciale Ramadan" }) +
+        f("message", "Message *", promo.message, { full: true, type: "textarea", rows: 3, placeholder: isCodeType ? "Utilisez le code RAMADAN20 pour -20% sur toute la boutique." : "Decouvrez notre nouvelle collection a prix exceptionnel !" }) +
+      '</div>' +
+    '</div>' +
 
-    <div class="promo-form-section">
-      <div class="promo-form-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        <span>Bouton & Lien</span>
-      </div>
-      <div class="mf-grid">
-        ${f("btnText", "Texte du bouton CTA", promo.btnText, { placeholder: "J'en profite" })}
-        <div class="mf-field"><label>Lien du bouton</label>
-          <select data-f="linkType" id="promo-link-type" class="adm-select" style="width:100%">
-            ${linkOptions.map(o => `<option value="${esc(o.value)}" ${o.value === currentType ? "selected" : ""}>${esc(o.label)}</option>`).join("")}
-          </select>
-        </div>
-        ${f("btnLink", "URL personnalisee (si type = URL)", promo.btnLink, { full: true, placeholder: "https://..." })}
-      </div>
-    </div>
+    '<div class="promo-form-section">' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' +
+        '<span>Image de fond (cover)</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        '<div class="mf-field mf-full">' +
+          '<label>Image depuis votre PC</label>' +
+          '<div class="promo-upload-area" id="promo-upload-area">' +
+            '<input type="file" id="promo-file-input" accept="image/*" style="display:none">' +
+            '<div class="promo-upload-content" id="promo-upload-content">' +
+              (promo.image ? '<img src="' + esc(promo.image) + '" class="promo-upload-preview" id="promo-upload-preview">' : '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted,#6B6560)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><p>Cliquez ou glissez une image ici</p>') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        f("image", "Ou URL / chemin de l'image", promo.image, { full: true, placeholder: "https://... ou images/offre.jpg" }) +
+        '<div class="mf-field mf-full">' +
+          '<label>Couleur du theme</label>' +
+          '<input type="hidden" data-f="bgColor" value="' + esc(promo.bgColor || '#B8860B') + '">' +
+          '<div class="promo-color-picker">' +
+            PROMO_COLORS.map(function(c){ return '<button type="button" data-pcolor="' + c.value + '" class="promo-color-btn' + (promo.bgColor === c.value ? ' selected' : '') + '" style="background:' + c.value + '" title="' + c.label + '"></button>'; }).join("") +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
 
-    <div class="promo-form-section">
-      <div class="promo-form-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Minuteur & Statut</span>
-      </div>
-      <div class="mf-grid">
-        ${f("timerEnd", "Minuteur — date/heure de fin (optionnel)", timerVal, { full: true, type: "datetime-local", hint: "La popup se fermera automatiquement a cette date. Laissez vide pour un affichage permanent." })}
-        <div class="mf-field mf-full">
-          <div class="promo-active-toggle">
-            <label class="promo-toggle-switch">
-              <input type="checkbox" data-f="active" ${promo.active ? "checked" : ""}>
-              <span class="promo-toggle-slider"></span>
-            </label>
-            <div class="promo-toggle-label">
-              <strong>Popup active</strong>
-              <small style="color:var(--muted)">${promo.active ? 'Affichee aux visiteurs' : 'Desactivee — pas visible'}</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `, (data) => {
+    (isCodeType ?
+    '<div class="promo-form-section promo-code-section" id="promo-code-section">' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M12 6v12"/></svg>' +
+        '<span>Reduction & Produits</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        f("promoCode", "Code promo *", promo.promoCode || "", { full: true, placeholder: "Ex: RAMADAN20" }) +
+        '<div class="mf-field"><label>Reduction *</label>' +
+          '<div class="promo-discount-row">' +
+            '<input type="number" data-f="promoDiscount" value="' + esc(promo.promoDiscount || "") + '" min="0" max="90" placeholder="20" style="width:80px;text-align:center">' +
+            '<span style="font-size:1.1rem;font-weight:700;color:var(--g700)">%</span>' +
+          '</div>' +
+          '<span class="mf-hint">Pourcentage de reduction applique</span>' +
+        '</div>' +
+        f("promoStart", "Valide a partir du", promo.promoStart ? promo.promoStart.slice(0, 16) : "", { full: true, type: "datetime-local" }) +
+        f("promoEnd", "Valide jusqu\'au", promo.promoEnd ? promo.promoEnd.slice(0, 16) : "", { full: true, type: "datetime-local" }) +
+        '<div class="mf-field mf-full">' +
+          '<label>Produits concernes</label>' +
+          '<div class="promo-prod-list">' +
+            (shopItemsHtml || '<p style="color:var(--muted);font-size:.85rem">Aucun produit en boutique.</p>') +
+          '</div>' +
+          ((db.rentals && db.rentals.length) ? '<label style="margin-top:.8rem;display:block;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-deep)">Locations</label><div class="promo-prod-list">' + rentalItemsHtml + '</div>' : '') +
+          '<small style="color:var(--muted);font-size:.78rem;display:block;margin-top:.5rem">Laissez tout deselectionne pour appliquer sur tous les produits.</small>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+    : '<div class="promo-form-section promo-code-section" id="promo-code-section" style="display:none">' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M12 6v12"/></svg>' +
+        '<span>Reduction & Produits</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        f("promoCode", "Code promo *", promo.promoCode || "", { full: true, placeholder: "Ex: RAMADAN20" }) +
+        '<div class="mf-field"><label>Reduction *</label>' +
+          '<div class="promo-discount-row">' +
+            '<input type="number" data-f="promoDiscount" value="' + esc(promo.promoDiscount || "") + '" min="0" max="90" placeholder="20" style="width:80px;text-align:center">' +
+            '<span style="font-size:1.1rem;font-weight:700;color:var(--g700)">%</span>' +
+          '</div>' +
+          '<span class="mf-hint">Pourcentage de reduction applique</span>' +
+        '</div>' +
+        f("promoStart", "Valide a partir du", promo.promoStart ? promo.promoStart.slice(0, 16) : "", { full: true, type: "datetime-local" }) +
+        f("promoEnd", "Valide jusqu\'au", promo.promoEnd ? promo.promoEnd.slice(0, 16) : "", { full: true, type: "datetime-local" }) +
+        '<div class="mf-field mf-full">' +
+          '<label>Produits concernes</label>' +
+          '<div class="promo-prod-list">' +
+            (shopItemsHtml || '<p style="color:var(--muted);font-size:.85rem">Aucun produit en boutique.</p>') +
+          '</div>' +
+          ((db.rentals && db.rentals.length) ? '<label style="margin-top:.8rem;display:block;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-deep)">Locations</label><div class="promo-prod-list">' + rentalItemsHtml + '</div>' : '') +
+          '<small style="color:var(--muted);font-size:.78rem;display:block;margin-top:.5rem">Laissez tout deselectionne pour appliquer sur tous les produits.</small>' +
+        '</div>' +
+      '</div>' +
+    '</div>') +
+
+    '<div class="promo-form-section" id="promo-btn-section"' + (isCodeType ? ' style="display:none"' : '') + '>' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' +
+        '<span>Bouton & Lien</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        f("btnText", "Texte du bouton CTA", promo.btnText, { placeholder: "J'en profite" }) +
+        '<div class="mf-field"><label>Lien du bouton</label>' +
+          '<select data-f="linkType" id="promo-link-type" class="adm-select" style="width:100%">' +
+            linkOptions.map(function(o){ return '<option value="' + esc(o.value) + '" ' + (o.value === currentType ? "selected" : "") + '>' + esc(o.label) + '</option>'; }).join("") +
+          '</select>' +
+        '</div>' +
+        f("btnLink", "URL personnalisee (si type = URL)", promo.btnLink, { full: true, placeholder: "https://..." }) +
+      '</div>' +
+    '</div>' +
+
+    '<div class="promo-form-section">' +
+      '<div class="promo-form-header">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g700,#175247)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
+        '<span>Minuteur & Statut</span>' +
+      '</div>' +
+      '<div class="mf-grid">' +
+        f("timerEnd", "Minuteur — date/heure de fin (optionnel)", timerVal, { full: true, type: "datetime-local", hint: "Affichage automatiquement desactive a cette date." }) +
+        '<div class="mf-field mf-full">' +
+          '<div class="promo-active-toggle">' +
+            '<label class="promo-toggle-switch">' +
+              '<input type="checkbox" data-f="active" ' + (promo.active ? "checked" : "") + '>' +
+              '<span class="promo-toggle-slider"></span>' +
+            '</label>' +
+            '<div class="promo-toggle-label">' +
+              '<strong>Offre active</strong>' +
+              '<small style="color:var(--muted)">' + (promo.active ? 'Visible aux visiteurs' : 'Desactivee — pas visible') + '</small>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  , function(data) {
     if (!data.title || !data.message) { return "Titre et message requis"; }
     data.bgColor = promo.bgColor || "#B8860B";
     data.active = !!data.active;
     data.id = promo.id;
+    data.promoType = data.promoType || "offre";
 
-    const lt = data.linkType || "custom";
+    if (data.promoType === "code") {
+      if (!data.promoCode) return "Code promo requis";
+      if (!data.promoDiscount || Number(data.promoDiscount) <= 0) return "Pourcentage de reduction requis";
+      data.promoCode = data.promoCode.trim().toUpperCase();
+      data.promoDiscount = Number(data.promoDiscount);
+    } else {
+      delete data.promoCode;
+      delete data.promoDiscount;
+      delete data.promoProducts;
+      delete data.promoStart;
+      delete data.promoEnd;
+    }
+
+    if (data.promoType === "code") {
+      var pprods = [];
+      document.querySelectorAll('[data-f="pprod"]:checked').forEach(function(cb) { pprods.push(cb.value); });
+      data.promoProducts = pprods;
+      if (!data.promoStart) delete data.promoStart;
+      if (!data.promoEnd) delete data.promoEnd;
+    }
+
+    var lt = data.linkType || "custom";
     data.linkType = lt;
     if (lt === "whatsapp") {
       data.btnLink = waLink(data.btnText || "Bonjour !");
@@ -994,11 +1114,11 @@ function editPromo(id) {
       data.btnLink = "apropos.html";
     } else if (lt === "page_contact") {
       data.btnLink = "contact.html";
-    } else if (lt.startsWith("prod_")) {
+    } else if (lt.indexOf("prod_") === 0) {
       data.btnLink = "produit.html?id=" + lt.slice(5);
-    } else if (lt.startsWith("rent_")) {
+    } else if (lt.indexOf("rent_") === 0) {
       data.btnLink = "location-produit.html?id=" + lt.slice(5);
-    } else if (lt.startsWith("party_")) {
+    } else if (lt.indexOf("party_") === 0) {
       data.btnLink = "packs.html";
     }
 
@@ -1006,7 +1126,7 @@ function editPromo(id) {
 
     if (isNew) db.promos.push(data);
     else {
-      const idx = db.promos.findIndex(p => p.id === data.id);
+      var idx = db.promos.findIndex(function(p){ return p.id === data.id; });
       if (idx >= 0) Object.assign(db.promos[idx], data);
     }
   });
@@ -1020,6 +1140,57 @@ function editPromo(id) {
     };
     toggleCustomUrl();
     linkTypeEl.addEventListener("change", toggleCustomUrl);
+  }
+
+  document.querySelectorAll("[data-promo-type]").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll("[data-promo-type]").forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      var hidden = document.querySelector('[data-f="promoType"]');
+      if (hidden) hidden.value = btn.getAttribute("data-promo-type");
+      var newType = btn.getAttribute("data-promo-type");
+      var codeSection = document.getElementById("promo-code-section");
+      var btnSection = document.getElementById("promo-btn-section");
+      if (codeSection) codeSection.style.display = newType === "code" ? "" : "none";
+      if (btnSection) btnSection.style.display = newType === "code" ? "none" : "";
+    });
+  });
+
+  var fileInput = document.getElementById("promo-file-input");
+  var uploadArea = document.getElementById("promo-upload-area");
+  var uploadContent = document.getElementById("promo-upload-preview") || document.getElementById("promo-upload-content");
+  var imageField = document.querySelector('[data-f="image"]');
+  if (fileInput && uploadArea) {
+    uploadArea.addEventListener("click", function() { fileInput.click(); });
+    uploadArea.addEventListener("dragover", function(e) { e.preventDefault(); uploadArea.classList.add("dragover"); });
+    uploadArea.addEventListener("dragleave", function() { uploadArea.classList.remove("dragover"); });
+    uploadArea.addEventListener("drop", function(e) {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+      if (e.dataTransfer.files.length) handlePromoFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", function() {
+      if (fileInput.files.length) handlePromoFile(fileInput.files[0]);
+    });
+    function handlePromoFile(file) {
+      if (!file.type.startsWith("image/")) { toast("Seules les images sont acceptees."); return; }
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var dataUrl = ev.target.result;
+        if (imageField) imageField.value = dataUrl;
+        if (uploadContent && uploadContent.tagName === "IMG") {
+          uploadContent.src = dataUrl;
+        } else {
+          var img = document.createElement("img");
+          img.src = dataUrl;
+          img.className = "promo-upload-preview";
+          img.id = "promo-upload-preview";
+          uploadArea.innerHTML = "";
+          uploadArea.appendChild(img);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   document.querySelectorAll("[data-pcolor]").forEach(function(b) {
@@ -1237,8 +1408,6 @@ function initLogin() {
   const demoBox = $("#demo-code-box");
   const demoVal = $("#demo-code-val");
   const input = $("#login-code");
-  const mailHint = $("#adm-mail-hint");
-  if (mailHint && typeof ADMIN_EMAIL !== "undefined") mailHint.textContent = ADMIN_EMAIL;
   window.__admCode = () => activeCode;
 
   function tick() {
@@ -1251,8 +1420,9 @@ function initLogin() {
 
   async function sendCode() {
     errEl.textContent = ""; infoEl.textContent = "";
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    activeCode = { code, exp: Date.now() + 30000, used: false };
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$%&*";
+    let code = ""; for (let i = 0; i < 10; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    activeCode = { code, exp: Date.now() + 40000, used: false };
     sendBtn.disabled = true;
     sendBtn.textContent = "Envoi…";
     demoBox.style.display = "none";
@@ -1271,12 +1441,12 @@ function initLogin() {
             service_id: cfg.serviceId,
             template_id: cfg.templateId,
             user_id: cfg.publicKey,
-            template_params: { to_email: toMail, passcode: code, validity: "30 secondes", brand: SITE.name }
+            template_params: { to_email: toMail, passcode: code, validity: "40 secondes", brand: SITE.name }
           })
         });
         if (!r.ok) throw new Error("HTTP " + r.status);
         sentReal = true;
-        infoEl.textContent = "✅ Code envoyé à " + toMail + " — vérifiez votre boîte (et les spams).";
+        infoEl.textContent = "";
       } catch (e) {
         infoEl.textContent = "⚠️ Envoi email impossible — code de secours affiché ci-dessous.";
       }
@@ -1284,9 +1454,7 @@ function initLogin() {
     if (!sentReal) {
       demoVal.textContent = code;
       demoBox.style.display = "block";
-      if (!(cfg && cfg.serviceId && cfg.templateId && cfg.publicKey)) {
-        infoEl.innerHTML = 'Mode démo : ajoutez vos clés EmailJS dans <strong>js/config.js</strong> pour recevoir le code par email.';
-      }
+      infoEl.textContent = "";
     }
 
     setTimeout(() => {
@@ -1303,7 +1471,7 @@ function initLogin() {
       errEl.textContent = "⏱ Code expiré — cliquez sur « Renvoyer le code ».";
       return;
     }
-    if (input.value.replace(/\D/g, "") === activeCode.code) {
+    if (input.value.trim() === activeCode.code) {
       activeCode.used = true;
       sessionStorage.setItem(SESSION_KEY, "1");
       startApp();
@@ -1317,7 +1485,7 @@ function initLogin() {
   sendBtn.addEventListener("click", sendCode);
   $("#login-btn").addEventListener("click", tryLogin);
   input.addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
-  input.addEventListener("input", () => { input.value = input.value.replace(/\D/g, "").slice(0, 6); });
+  input.addEventListener("input", () => { input.value = input.value.slice(0, 10); });
 }
 
 function startApp() {
