@@ -780,14 +780,14 @@ const PROMO_COLORS = [
 ];
 
 function viewPromos() {
-  const db = DB.data;
-  const promos = db.promos || [];
-  const active = promos.filter(p => p.active);
-  const inactive = promos.filter(p => !p.active);
+  var db = DB.data;
+  var promos = db.promos || [];
+  var active = promos.filter(function(p){ return p.active; });
+  var inactive = promos.filter(function(p){ return !p.active; });
 
   function promoRow(p) {
-    const linkLabel = (() => {
-      const lt = p.linkType || "custom";
+    var linkLabel = (function() {
+      var lt = p.linkType || "custom";
       if (lt === "whatsapp") return "WhatsApp";
       if (lt === "page_boutique") return "Boutique";
       if (lt === "page_location") return "Location";
@@ -796,91 +796,80 @@ function viewPromos() {
       if (lt === "page_deco") return "Decoration";
       if (lt === "page_apropos") return "A propos";
       if (lt === "page_contact") return "Contact";
-      if (lt.startsWith("prod_")) { const s = db.shop.find(x => x.id === lt.slice(5)); return s ? s.name : "Produit"; }
-      if (lt.startsWith("rent_")) { const r = db.rentals.find(x => x.id === lt.slice(5)); return r ? r.name : "Location"; }
-      if (lt.startsWith("party_")) { const pt = db.parties.find(x => x.id === lt.slice(5)); return pt ? pt.name : "Pack fete"; }
+      if (lt.startsWith("prod_")) { var s = db.shop.find(function(x){ return x.id === lt.slice(5); }); return s ? s.name : "Produit"; }
+      if (lt.startsWith("rent_")) { var r = db.rentals.find(function(x){ return x.id === lt.slice(5); }); return r ? r.name : "Location"; }
+      if (lt.startsWith("party_")) { var pt = db.parties.find(function(x){ return x.id === lt.slice(5); }); return pt ? pt.name : "Pack fete"; }
       if (p.btnLink) return (p.btnLink.length > 28 ? p.btnLink.slice(0, 28) + "..." : p.btnLink);
       return "—";
     })();
-    const timerInfo = p.timerEnd ? '<br><small style="color:var(--gold,#B8860B)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ' + new Date(p.timerEnd).toLocaleDateString("fr-FR", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) + '</small>' : '';
-    return `<tr>
-      <td><div style="display:flex;align-items:center;gap:.65rem">
-        <span style="width:16px;height:16px;border-radius:50%;background:${esc(p.bgColor || '#B8860B')};display:inline-block;flex-shrink:0;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.12)"></span>
-        <div><strong>${esc(p.title)}</strong><br><small style="color:var(--muted)">${esc(p.btnText || "Voir")}${timerInfo}</small></div>
-      </div></td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">${esc(p.message)}</td>
-      <td><span class="pill ${p.active ? 'pill-green' : 'pill-red'}">${p.active ? 'Active' : 'Inactive'}</span></td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.84rem;color:var(--muted)">${linkLabel}</td>
-      <td><div class="row-actions" style="gap:.35rem">
-        <button class="abtn" data-promo-edit="${p.id}" title="Modifier cette popup">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Modifier
-        </button>
-        <button class="abtn ${p.active ? 'abtn-warn' : 'abtn-ok'}" data-promo-toggle="${p.id}" title="${p.active ? 'Desactiver' : 'Activer'}">
-          ${p.active ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg> Desactiver' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Activer'}
-        </button>
-        <button class="abtn abtn-danger" data-promo-del="${p.id}" title="Supprimer cette popup">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Suppr.
-        </button>
-      </div></td>
-    </tr>`;
+    var timerInfo = p.timerEnd ? '<br><small style="color:var(--gold,#B8860B)">Timer: ' + new Date(p.timerEnd).toLocaleDateString("fr-FR", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) + '</small>' : '';
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:.65rem">' +
+        '<span style="width:16px;height:16px;border-radius:50%;background:' + esc(p.bgColor || '#B8860B') + ';display:inline-block;flex-shrink:0;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.12)"></span>' +
+        '<div><strong>' + esc(p.title) + '</strong><br><small style="color:var(--muted)">' + esc(p.btnText || "Voir") + timerInfo + '</small></div>' +
+      '</div></td>' +
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">' + esc(p.message) + '</td>' +
+      '<td><span class="pill ' + (p.active ? 'pill-green' : 'pill-red') + '">' + (p.active ? 'Active' : 'Inactive') + '</span></td>' +
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.84rem;color:var(--muted)">' + linkLabel + '</td>' +
+      '<td><div class="row-actions" style="gap:.35rem">' +
+        '<button class="abtn btn-promo-edit" data-id="' + esc(p.id) + '">Modifier</button>' +
+        '<button class="abtn ' + (p.active ? 'abtn-warn' : 'abtn-ok') + ' btn-promo-toggle" data-id="' + esc(p.id) + '">' + (p.active ? 'Desactiver' : 'Activer') + '</button>' +
+        '<button class="abtn abtn-danger btn-promo-del" data-id="' + esc(p.id) + '">Suppr.</button>' +
+      '</div></td>' +
+    '</tr>';
   }
 
-  $("#adm-content").innerHTML = `
-  <div class="adm-panel">
-    <div class="ap-head"><h3>Popups / Offres speciales</h3>
-      <button class="btn-new" id="promo-new-btn">+ Nouvelle offre</button>
-    </div>
-    <p style="padding:0 1.5rem;color:var(--muted);font-size:.88rem;line-height:1.55">
-      Creez des popups promotionnelles qui s'affichent automatiquement aux visiteurs a chaque rafraichissement de page.
-      Seule la popup la plus recente et active est affichee.
-    </p>
-    ${active.length ? `
-    <div class="adm-table-wrap"><table class="adm-table">
-      <thead><tr><th>Titre</th><th>Message</th><th>Etat</th><th>Lien</th><th>Actions</th></tr></thead>
-      <tbody>${active.map(promoRow).join("")}</tbody>
-    </table></div>` : ""}
+  var html = '<div class="adm-panel">' +
+    '<div class="ap-head"><h3>Popups / Offres speciales</h3>' +
+      '<button class="btn-new btn-promo-new">+ Nouvelle offre</button>' +
+    '</div>' +
+    '<p style="padding:0 1.5rem;color:var(--muted);font-size:.88rem;line-height:1.55">' +
+      'Creez des popups promotionnelles qui s\'affichent automatiquement aux visiteurs a chaque rafraichissement de page. ' +
+      'Seule la popup la plus recente et active est affichee.' +
+    '</p>';
 
-    ${inactive.length ? `
-    <div style="margin-top:1.2rem;padding:0 1.5rem">
-      <h4 style="font-family:'Cormorant Garamond',serif;color:var(--muted);margin-bottom:.8rem;font-size:1.05rem">Inactives (${inactive.length})</h4>
-      <div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Titre</th><th>Message</th><th>Etat</th><th>Lien</th><th>Actions</th></tr></thead>
-        <tbody>${inactive.map(promoRow).join("")}</tbody>
-      </table></div>
-    </div>` : ""}
+  if (active.length) {
+    html += '<div class="adm-table-wrap"><table class="adm-table">' +
+      '<thead><tr><th>Titre</th><th>Message</th><th>Etat</th><th>Lien</th><th>Actions</th></tr></thead>' +
+      '<tbody>' + active.map(promoRow).join("") + '</tbody></table></div>';
+  }
 
-    ${!promos.length ? `<div class="empty-admin"><strong>Aucune popup</strong><br>Cliquez sur « + Nouvelle offre » pour creer votre premiere popup promotionnelle.</div>` : ""}
-  </div>`;
+  if (inactive.length) {
+    html += '<div style="margin-top:1.2rem;padding:0 1.5rem">' +
+      '<h4 style="font-family:Cormorant Garamond,serif;color:var(--muted);margin-bottom:.8rem;font-size:1.05rem">Inactives (' + inactive.length + ')</h4>' +
+      '<div class="adm-table-wrap"><table class="adm-table">' +
+      '<thead><tr><th>Titre</th><th>Message</th><th>Etat</th><th>Lien</th><th>Actions</th></tr></thead>' +
+      '<tbody>' + inactive.map(promoRow).join("") + '</tbody></table></div></div>';
+  }
 
-  bindEditButtons();
+  if (!promos.length) {
+    html += '<div class="empty-admin"><strong>Aucune popup</strong><br>Cliquez sur "+ Nouvelle offre" pour creer votre premiere popup promotionnelle.</div>';
+  }
 
-  var contentEl = document.getElementById("adm-content");
-  if (contentEl && !contentEl._promoBound) {
-    contentEl._promoBound = true;
-    contentEl.addEventListener("click", function(e) {
-      var btn = e.target.closest("[data-promo-new]");
-      if (btn) { editPromo(null); return; }
-      var eb = e.target.closest("[data-promo-edit]");
-      if (eb) { e.preventDefault(); e.stopPropagation(); editPromo(eb.getAttribute("data-promo-edit")); return; }
-      var tb = e.target.closest("[data-promo-toggle]");
-      if (tb) {
-        e.preventDefault(); e.stopPropagation();
-        var tid = tb.getAttribute("data-promo-toggle");
-        var tp = (DB.data.promos || []).find(function(x){ return x.id === tid; });
-        if (tp) { tp.active = !tp.active; DB.save(); viewPromos(); toast(tp.active ? "Popup activee" : "Popup desactivee"); }
-        return;
-      }
-      var db2 = e.target.closest("[data-promo-del]");
-      if (db2) {
-        e.preventDefault(); e.stopPropagation();
-        if (!confirm("Supprimer cette popup ?")) return;
-        var did = db2.getAttribute("data-promo-del");
-        DB.data.promos = (DB.data.promos || []).filter(function(x){ return x.id !== did; });
-        DB.save(); viewPromos(); toast("Popup supprimee.");
-        return;
-      }
+  html += '</div>';
+  $("#adm-content").innerHTML = html;
+
+  var newBtn = document.querySelector(".btn-promo-new");
+  if (newBtn) newBtn.addEventListener("click", function(){ editPromo(null); });
+
+  document.querySelectorAll(".btn-promo-edit").forEach(function(b){
+    b.addEventListener("click", function(){ editPromo(b.getAttribute("data-id")); });
+  });
+  document.querySelectorAll(".btn-promo-toggle").forEach(function(b){
+    b.addEventListener("click", function(){
+      var id = b.getAttribute("data-id");
+      var p = db.promos.find(function(x){ return x.id === id; });
+      if (p) { p.active = !p.active; DB.save(); viewPromos(); toast(p.active ? "Popup activee" : "Popup desactivee"); }
     });
-  }
+  });
+  document.querySelectorAll(".btn-promo-del").forEach(function(b){
+    b.addEventListener("click", function(){
+      if (!confirm("Supprimer cette popup ?")) return;
+      var id = b.getAttribute("data-id");
+      DB.data.promos = (DB.data.promos || []).filter(function(x){ return x.id !== id; });
+      DB.save(); viewPromos(); toast("Popup supprimee.");
+    });
+  });
 }
 
 function editPromo(id) {

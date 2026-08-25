@@ -190,7 +190,7 @@
         "40",
         "42"
       ],
-      "stock": 2,
+      "stock": 1,
       "isNew": true,
       "icon": "caftan",
       "colors": [
@@ -761,7 +761,35 @@
       ]
     }
   ],
-  "orders": [],
+  "orders": [
+    {
+      "id": "omt8viiu2vmxy",
+      "ref": "CMD-FXRA0Q",
+      "customer": {
+        "name": "zakaria ahjat",
+        "phone": "0651360373",
+        "city": "marrakech",
+        "address": "marrakech tamnsourt  tr 1  lettre o nr 14",
+        "note": "",
+        "delivery": "domicile",
+        "payment": "Paiement à la livraison"
+      },
+      "items": [
+        {
+          "id": "vh",
+          "name": "Caftan Soie Terz Fassi",
+          "size": "38",
+          "qty": 1,
+          "price": 2450
+        }
+      ],
+      "subtotal": 2450,
+      "fee": 50,
+      "total": 2500,
+      "status": "Nouvelle",
+      "created": "2026-08-25T16:22:39.578Z"
+    }
+  ],
   "reservations": [],
   "messages": [],
   "promos": []
