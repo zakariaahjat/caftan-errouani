@@ -792,5 +792,18 @@
   ],
   "reservations": [],
   "messages": [],
-  "promos": []
+  "promos": [
+    {
+      "title": "SUMMER DEAL",
+      "message": "-40%",
+      "image": "https://imgs.search.brave.com/2DA_wjr1a88lSgn3XqUymYBEY0VZrmxdfVJP8BFCC1w/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jYWZ0/YW5pYXBhcmlzLmNv/bS9jZG4vc2hvcC9m/aWxlcy9waG90b18w/MV8zeDRfNjI4M2My/YWItYjE2YS00NzYz/LTkxZGYtMjQ1ZTdm/YmQ3NDM1LmpwZz92/PTE3ODQzODI2MTQm/d2lkdGg9MTUzNg",
+      "bgColor": "#B8860B",
+      "btnText": "J'en profite",
+      "linkType": "prod_vo",
+      "btnLink": "produit.html?id=vo",
+      "timerEnd": "2026-08-26T18:05",
+      "active": false,
+      "id": "promo_mt8wzrhrbbba"
+    }
+  ]
 }
