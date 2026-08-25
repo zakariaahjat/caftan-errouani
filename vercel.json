@@ -1,13 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" },
-    { "src": "**/*.html", "use": "@vercel/static" },
-    { "src": "**/*.{css,js,jpg,png,svg,ico,woff,woff2}", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "^/api/(.*)", "dest": "/api/$1" },
-    { "src": "^/admin/(.*)", "dest": "/admin/$1" },
-    { "src": "/admin$", "redirect": "/admin/index.html" }
-  ]
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 10
+    }
+  }
 }
